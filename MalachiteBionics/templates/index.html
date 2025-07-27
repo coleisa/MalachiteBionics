@@ -1,6 +1,6 @@
-% extends "base.html" %}
+{% extends "base.html" %}
 
-{% block title %}Professional Trading Bot Service{% endblock %}
+{% block title %}Professional Trading Bot Solutions{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
@@ -8,42 +8,50 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6">
-                <h1 class="display-4 fw-bold mb-4">
-                    Advanced Crypto Trading Signals
-                </h1>
-                <p class="lead mb-4 text-muted">
-                    Get professional trading signals powered by RSI, MACD, and momentum analysis. 
-                    Join thousands of traders making informed decisions with our Discord bot.
-                </p>
-                <div class="d-flex gap-3 mb-5">
-                    <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
-                        Start Free Trial
-                    </a>
-                    <a href="{{ url_for('pricing') }}" class="btn btn-outline-primary btn-lg">
-                        View Pricing
-                    </a>
-                </div>
-                
-                <!-- Trust Indicators -->
-                <div class="row text-center">
-                    <div class="col-4">
-                        <h4 class="fw-bold">1000+</h4>
-                        <small class="text-muted">Active Users</small>
+                <div class="mb-5">
+                    <h1 class="display-4 fw-bold mb-4">
+                        Intelligent <span style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Trading Algorithms</span> for Discord Communities
+                    </h1>
+                    <p class="lead mb-4">
+                        Advanced cryptocurrency trading bots powered by machine learning. Real-time market analysis, automated trading signals, and portfolio management for professional traders.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{{ url_for('pricing') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-rocket me-2"></i>Start Trading
+                        </a>
+                        <a href="#features" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-chart-line me-2"></i>Learn More
+                        </a>
                     </div>
-                    <div class="col-4">
-                        <h4 class="fw-bold">24/7</h4>
-                        <small class="text-muted">Monitoring</small>
-                    </div>
-                    <div class="col-4">
-                        <h4 class="fw-bold">99.9%</h4>
-                        <small class="text-muted">Uptime</small>
+                    <div class="mt-4">
+                        <small class="text-muted">
+                            <i class="fas fa-shield-alt me-2"></i>Trusted by 500+ professional traders
+                            <span class="mx-3">•</span>
+                            <i class="fas fa-clock me-2"></i>24/7 market monitoring
+                        </small>
                     </div>
                 </div>
             </div>
             <div class="col-lg-6">
                 <div class="text-center">
-                    <img src="https://via.placeholder.com/500x400/000000/FFFFFF?text=Trading+Dashboard" 
-                         alt="Trading Dashboard" class="img-fluid rounded shadow">
+                    <div class="position-relative">
+                        <div style="width: 100%; height: 400px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0;">
+                            <div class="text-center">
+                                <i class="fas fa-chart-line" style="font-size: 4rem; color: #3b82f6; margin-bottom: 1rem;"></i>
+                                <h5 class="text-muted">Live Trading Dashboard</h5>
+                                <p class="small text-muted">Real-time market analysis & signals</p>
+                            </div>
+                        </div>
+                        <!-- Floating stats -->
+                        <div class="position-absolute" style="top: 20px; right: 20px; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                            <div class="text-success fw-bold">+24.5%</div>
+                            <small class="text-muted">This Month</small>
+                        </div>
+                        <div class="position-absolute" style="bottom: 20px; left: 20px; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                            <div class="fw-bold">1,247</div>
+                            <small class="text-muted">Active Signals</small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -51,134 +59,167 @@
 </section>
 
 <!-- Features Section -->
-<section class="py-5">
+<section id="features" class="py-6">
     <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold">Why Choose Our Trading Bot?</h2>
-            <p class="lead text-muted">Advanced algorithms, real-time alerts, and proven results</p>
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-5 fw-bold mb-4">Why Choose Our Trading Bots?</h2>
+                <p class="lead text-muted">
+                    State-of-the-art technology meets professional trading expertise. Our algorithms analyze thousands of market indicators to deliver precise trading signals.
+                </p>
+            </div>
         </div>
         
-        <div class="row">
-            <div class="col-md-4">
+        <div class="row g-4">
+            <div class="col-lg-4">
                 <div class="feature-card text-center h-100">
                     <div class="mb-4">
-                        <i class="fas fa-chart-line fa-3x mb-3"></i>
+                        <i class="fas fa-brain fa-3x"></i>
                     </div>
-                    <h4>Multiple Algorithms</h4>
-                    <p class="text-muted">
-                        Choose from v3 (RSI), v6 (RSI+MACD), or v9 (RSI+MACD+Momentum) 
-                        algorithms based on your trading style.
+                    <h4 class="fw-bold mb-3">AI-Powered Analysis</h4>
+                    <p class="text-muted mb-0">
+                        Advanced machine learning algorithms analyze market patterns, sentiment, and technical indicators in real-time to identify profitable opportunities.
                     </p>
                 </div>
             </div>
-            <div class="col-md-4">
+            
+            <div class="col-lg-4">
                 <div class="feature-card text-center h-100">
                     <div class="mb-4">
-                        <i class="fab fa-discord fa-3x mb-3"></i>
+                        <i class="fas fa-shield-alt fa-3x"></i>
                     </div>
-                    <h4>Discord Integration</h4>
-                    <p class="text-muted">
-                        Receive instant trading signals directly in your Discord server 
-                        with dedicated channels for each cryptocurrency.
+                    <h4 class="fw-bold mb-3">Risk Management</h4>
+                    <p class="text-muted mb-0">
+                        Built-in risk management protocols with stop-loss, take-profit levels, and position sizing to protect your capital in volatile markets.
                     </p>
                 </div>
             </div>
-            <div class="col-md-4">
+            
+            <div class="col-lg-4">
                 <div class="feature-card text-center h-100">
                     <div class="mb-4">
-                        <i class="fas fa-clock fa-3x mb-3"></i>
+                        <i class="fas fa-bolt fa-3x"></i>
                     </div>
-                    <h4>Real-Time Alerts</h4>
-                    <p class="text-muted">
-                        Get buy and sell signals within minutes of market opportunities 
-                        with 24/7 automated monitoring.
+                    <h4 class="fw-bold mb-3">Lightning Fast</h4>
+                    <p class="text-muted mb-0">
+                        Millisecond execution speeds ensure you never miss market opportunities. Our infrastructure processes thousands of signals per second.
                     </p>
                 </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="feature-card text-center h-100">
+                    <div class="mb-4">
+                        <i class="fas fa-users fa-3x"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Community Driven</h4>
+                    <p class="text-muted mb-0">
+                        Join exclusive Discord communities where professional traders share insights, strategies, and real-time market analysis.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="feature-card text-center h-100">
+                    <div class="mb-4">
+                        <i class="fas fa-chart-line fa-3x"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Multi-Asset Trading</h4>
+                    <p class="text-muted mb-0">
+                        Trade across multiple cryptocurrency pairs with customizable strategies for Bitcoin, Ethereum, Altcoins, and emerging DeFi tokens.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="feature-card text-center h-100">
+                    <div class="mb-4">
+                        <i class="fas fa-mobile-alt fa-3x"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Mobile Alerts</h4>
+                    <p class="text-muted mb-0">
+                        Receive instant notifications on Discord, mobile apps, and email when high-probability trading opportunities are detected.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-6" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="h2 fw-bold mb-2" style="color: #3b82f6;">99.9%</div>
+                <h5 class="fw-semibold mb-2">Uptime</h5>
+                <p class="text-muted small mb-0">Reliable 24/7 monitoring</p>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="h2 fw-bold mb-2" style="color: #22c55e;">73%</div>
+                <h5 class="fw-semibold mb-2">Win Rate</h5>
+                <p class="text-muted small mb-0">Average success rate</p>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="h2 fw-bold mb-2" style="color: #8b5cf6;">500+</div>
+                <h5 class="fw-semibold mb-2">Active Users</h5>
+                <p class="text-muted small mb-0">Professional traders</p>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="h2 fw-bold mb-2" style="color: #f59e0b;">$2.5M+</div>
+                <h5 class="fw-semibold mb-2">Volume Traded</h5>
+                <p class="text-muted small mb-0">Monthly trading volume</p>
             </div>
         </div>
     </div>
 </section>
 
 <!-- How It Works Section -->
-<section class="py-5 bg-light">
+<section class="py-6">
     <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold">How It Works</h2>
-            <p class="lead text-muted">Get started in just 3 simple steps</p>
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-5 fw-bold mb-4">How It Works</h2>
+                <p class="lead text-muted">
+                    Get started in minutes with our streamlined onboarding process
+                </p>
+            </div>
         </div>
         
-        <div class="row">
-            <div class="col-md-4 text-center mb-4">
-                <div class="mb-4">
-                    <div class="bg-black text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
-                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">1</div>
-                </div>
-                <h4>Choose Your Plan</h4>
-                <p class="text-muted">Select the algorithm version and cryptocurrencies you want to monitor.</p>
-            </div>
-            <div class="col-md-4 text-center mb-4">
-                <div class="mb-4">
-                    <div class="bg-black text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
-                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">2</div>
-                </div>
-                <h4>Connect Discord</h4>
-                <p class="text-muted">Our bot will create dedicated channels in your Discord server for trading signals.</p>
-            </div>
-            <div class="col-md-4 text-center mb-4">
-                <div class="mb-4">
-                    <div class="bg-black text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
-                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">3</div>
-                </div>
-                <h4>Receive Signals</h4>
-                <p class="text-muted">Start receiving professional trading signals and make informed trading decisions.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Supported Coins Section -->
-<section class="py-5">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold">Supported Cryptocurrencies</h2>
-            <p class="lead text-muted">Monitor the most popular trading pairs</p>
-        </div>
-        
-        <div class="row text-center">
-            <div class="col-md-2 col-4 mb-4">
-                <div class="feature-card">
-                    <h5>SOL</h5>
-                    <small class="text-muted">Solana</small>
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 50%; color: white; font-size: 2rem; font-weight: bold;">1</div>
+                    </div>
+                    <h4 class="fw-bold mb-3">Choose Your Plan</h4>
+                    <p class="text-muted">
+                        Select from Basic, Classic, or Premium packages based on your trading experience and capital requirements.
+                    </p>
                 </div>
             </div>
-            <div class="col-md-2 col-4 mb-4">
-                <div class="feature-card">
-                    <h5>RAY</h5>
-                    <small class="text-muted">Raydium</small>
+            
+            <div class="col-lg-4">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e, #3b82f6); border-radius: 50%; color: white; font-size: 2rem; font-weight: bold;">2</div>
+                    </div>
+                    <h4 class="fw-bold mb-3">Connect Discord</h4>
+                    <p class="text-muted">
+                        Link your Discord account to receive real-time trading signals, market analysis, and community insights.
+                    </p>
                 </div>
             </div>
-            <div class="col-md-2 col-4 mb-4">
-                <div class="feature-card">
-                    <h5>BTC</h5>
-                    <small class="text-muted">Bitcoin</small>
-                </div>
-            </div>
-            <div class="col-md-2 col-4 mb-4">
-                <div class="feature-card">
-                    <h5>ETH</h5>
-                    <small class="text-muted">Ethereum</small>
-                </div>
-            </div>
-            <div class="col-md-2 col-4 mb-4">
-                <div class="feature-card">
-                    <h5>ADA</h5>
-                    <small class="text-muted">Cardano</small>
-                </div>
-            </div>
-            <div class="col-md-2 col-4 mb-4">
-                <div class="feature-card">
-                    <h5>DOT</h5>
-                    <small class="text-muted">Polkadot</small>
+            
+            <div class="col-lg-4">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b5cf6, #22c55e); border-radius: 50%; color: white; font-size: 2rem; font-weight: bold;">3</div>
+                    </div>
+                    <h4 class="fw-bold mb-3">Start Trading</h4>
+                    <p class="text-muted">
+                        Receive automated signals, execute trades, and track your performance with our advanced analytics dashboard.
+                    </p>
                 </div>
             </div>
         </div>
@@ -186,17 +227,31 @@
 </section>
 
 <!-- CTA Section -->
-<section class="py-5 bg-black text-white">
+<section class="py-6" style="background: linear-gradient(135deg, #000000 0%, #262626 100%); color: white;">
     <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-8">
-                <h2 class="display-5 fw-bold mb-3">Ready to Start Trading Smarter?</h2>
-                <p class="lead mb-0">Join thousands of traders using our professional signals</p>
-            </div>
-            <div class="col-lg-4 text-lg-end">
-                <a href="{{ url_for('register') }}" class="btn btn-light btn-lg px-5">
-                    Get Started Today
-                </a>
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-5 fw-bold mb-4">Ready to Transform Your Trading?</h2>
+                <p class="lead mb-4">
+                    Join hundreds of professional traders who trust our algorithms to maximize their profits and minimize risks in the cryptocurrency market.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{{ url_for('pricing') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-rocket me-2"></i>Get Started Now
+                    </a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>Create Free Account
+                    </a>
+                </div>
+                <div class="mt-4">
+                    <small class="opacity-75">
+                        <i class="fas fa-check me-2"></i>No setup fees
+                        <span class="mx-3">•</span>
+                        <i class="fas fa-check me-2"></i>Cancel anytime
+                        <span class="mx-3">•</span>
+                        <i class="fas fa-check me-2"></i>24/7 support
+                    </small>
+                </div>
             </div>
         </div>
     </div>
