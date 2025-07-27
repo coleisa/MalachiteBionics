@@ -1,196 +1,319 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Trading Bot Service{% endblock %}
+{% block title %}Trading Dashboard{% endblock %}
 
 {% block content %}
+<!-- Dashboard Header -->
+<section class="py-5" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-5 fw-bold mb-3">Welcome Back, {{ user.email.split('@')[0].title() }}</h1>
+                <p class="lead text-muted mb-0">
+                    Monitor your trading performance and manage your subscription
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="d-flex align-items-center justify-content-lg-end gap-3">
+                    <div class="text-center">
+                        <div class="h4 fw-bold mb-1" style="color: #22c55e;">ACTIVE</div>
+                        <small class="text-muted">Status</small>
+                    </div>
+                    <div class="vr" style="height: 40px;"></div>
+                    <div class="text-center">
+                        <div class="h4 fw-bold mb-1">{{ subscription.plan_type.upper() if subscription else "N/A" }}</div>
+                        <small class="text-muted">Plan</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Dashboard Content -->
 <section class="py-5">
     <div class="container">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-5">
-            <div>
-                <h1 class="display-5 fw-bold">Dashboard</h1>
-                <p class="text-muted mb-0">Welcome back, {{ user.email }}</p>
-            </div>
-            {% if not subscription %}
-                <a href="{{ url_for('pricing') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Subscribe Now
-                </a>
-            {% endif %}
-        </div>
-        
-        <!-- Subscription Status -->
-        <div class="row mb-4">
-            <div class="col-12">
+        <div class="row g-4">
+            <!-- Subscription Status Card -->
+            <div class="col-lg-8">
                 <div class="dashboard-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="mb-2">Subscription Status</h4>
-                            {% if subscription %}
-                                <div class="d-flex align-items-center gap-3">
+                    {% if subscription %}
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <div>
+                                <h3 class="fw-bold mb-2">
+                                    <i class="fas fa-chart-line me-2" style="color: #3b82f6;"></i>
+                                    {{ subscription.plan_type.upper() }} Trading Algorithm
+                                </h3>
+                                <p class="text-muted mb-0">
+                                    {% if subscription.plan_type == 'v3' %}
+                                        RSI-based signals for reliable market entry points
+                                    {% elif subscription.plan_type == 'v6' %}
+                                        Enhanced RSI + MACD analysis for better accuracy
+                                    {% else %}
+                                        Professional RSI + MACD + Momentum analysis
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                {% if subscription.status == 'active' %}
                                     <span class="status-badge status-active">
                                         <i class="fas fa-check-circle"></i>
-                                        Active - {{ subscription.plan_type.upper() }}
+                                        Active
                                     </span>
-                                    <small class="text-muted">
-                                        Next billing: {{ subscription.current_period_end.strftime('%B %d, %Y') if subscription.current_period_end }}
-                                    </small>
-                                </div>
-                            {% else %}
-                                <span class="status-badge status-inactive">
-                                    <i class="fas fa-times-circle"></i>
-                                    No Active Subscription
-                                </span>
-                            {% endif %}
+                                {% else %}
+                                    <span class="status-badge status-inactive">
+                                        <i class="fas fa-times-circle"></i>
+                                        Inactive
+                                    </span>
+                                {% endif %}
+                            </div>
                         </div>
-                        {% if subscription %}
-                            <form method="POST" action="{{ url_for('cancel_subscription') }}" 
-                                  onsubmit="return confirm('Are you sure you want to cancel your subscription?')">
-                                <button type="submit" class="btn btn-outline-danger">
-                                    Cancel Subscription
-                                </button>
-                            </form>
+                        
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-3">
+                                <div class="text-center p-3" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-radius: 12px;">
+                                    <div class="h4 fw-bold mb-1" style="color: #3b82f6;">
+                                        {% if subscription.plan_type == 'v3' %}3
+                                        {% elif subscription.plan_type == 'v6' %}6
+                                        {% else %}∞{% endif %}
+                                    </div>
+                                    <small class="text-muted">Coin Pairs</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px;">
+                                    <div class="h4 fw-bold mb-1" style="color: #22c55e;">24/7</div>
+                                    <small class="text-muted">Monitoring</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3" style="background: linear-gradient(135deg, #fef7ff, #f3e8ff); border-radius: 12px;">
+                                    <div class="h4 fw-bold mb-1" style="color: #8b5cf6;">
+                                        {{ subscription.coins.split(',') | length if subscription.coins else 0 }}
+                                    </div>
+                                    <small class="text-muted">Selected</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3" style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border-radius: 12px;">
+                                    <div class="h4 fw-bold mb-1" style="color: #f59e0b;">Live</div>
+                                    <small class="text-muted">Signals</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if subscription.coins %}
+                            <div class="mb-4">
+                                <h5 class="fw-semibold mb-3">
+                                    <i class="fas fa-coins me-2"></i>
+                                    Monitored Cryptocurrencies
+                                </h5>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for coin in subscription.coins.split(',') %}
+                                        <span class="badge" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 0.75rem 1rem; border-radius: 50px; font-size: 0.875rem;">
+                                            {{ coin.strip() }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         {% endif %}
+                        
+                        <div class="border-top pt-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h6 class="fw-semibold mb-2">Billing Information</h6>
+                                    <p class="text-muted small mb-1">
+                                        Next billing: {{ subscription.current_period_end.strftime('%B %d, %Y') if subscription.current_period_end else 'N/A' }}
+                                    </p>
+                                    <p class="text-muted small mb-0">
+                                        Current period: {{ subscription.current_period_start.strftime('%B %d') if subscription.current_period_start else 'N/A' }} - 
+                                        {{ subscription.current_period_end.strftime('%B %d, %Y') if subscription.current_period_end else 'N/A' }}
+                                    </p>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <form method="POST" action="{{ url_for('cancel_subscription') }}" class="d-inline">
+                                        <button type="submit" class="btn btn-outline-danger" 
+                                                onclick="return confirm('Are you sure you want to cancel your subscription?')">
+                                            <i class="fas fa-times me-2"></i>Cancel Subscription
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-4">
+                                <i class="fas fa-chart-line" style="font-size: 4rem; color: #d1d5db;"></i>
+                            </div>
+                            <h3 class="fw-bold mb-3">No Active Subscription</h3>
+                            <p class="text-muted mb-4">
+                                Get started with our professional trading algorithms and start receiving real-time signals.
+                            </p>
+                            <a href="{{ url_for('pricing') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-rocket me-2"></i>Choose Your Plan
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Quick Actions & Stats -->
+            <div class="col-lg-4">
+                <!-- Account Info -->
+                <div class="dashboard-card mb-4">
+                    <h5 class="fw-semibold mb-3">
+                        <i class="fas fa-user me-2"></i>
+                        Account Information
+                    </h5>
+                    <div class="mb-3">
+                        <label class="small text-muted">Email</label>
+                        <div class="fw-medium">{{ user.email }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Member Since</label>
+                        <div class="fw-medium">{{ user.created_at.strftime('%B %Y') }}</div>
+                    </div>
+                    {% if user.discord_user_id %}
+                        <div class="mb-3">
+                            <label class="small text-muted">Discord Connected</label>
+                            <div class="fw-medium text-success">
+                                <i class="fab fa-discord me-2"></i>Connected
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="mb-3">
+                            <label class="small text-muted">Discord Status</label>
+                            <div class="fw-medium text-warning">
+                                <i class="fas fa-unlink me-2"></i>Not Connected
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="dashboard-card mb-4">
+                    <h5 class="fw-semibold mb-3">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Quick Stats
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
+                                <div class="h5 fw-bold mb-1" style="color: #3b82f6;">24h</div>
+                                <small class="text-muted">Uptime</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
+                                <div class="h5 fw-bold mb-1" style="color: #22c55e;">{{ subscription.coins.split(',') | length if subscription and subscription.coins else 0 }}</div>
+                                <small class="text-muted">Coins</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
+                                <div class="h5 fw-bold mb-1" style="color: #8b5cf6;">Live</div>
+                                <small class="text-muted">Status</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
+                                <div class="h5 fw-bold mb-1" style="color: #f59e0b;">∞</div>
+                                <small class="text-muted">Signals</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="dashboard-card">
+                    <h5 class="fw-semibold mb-3">
+                        <i class="fas fa-bolt me-2"></i>
+                        Quick Actions
+                    </h5>
+                    <div class="d-grid gap-2">
+                        {% if not subscription %}
+                            <a href="{{ url_for('pricing') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Start Subscription
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('pricing') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-up me-2"></i>Upgrade Plan
+                            </a>
+                        {% endif %}
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="fab fa-discord me-2"></i>Connect Discord
+                            <small class="ms-2 badge bg-warning text-dark">Soon</small>
+                        </button>
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="fas fa-download me-2"></i>Download Reports
+                            <small class="ms-2 badge bg-warning text-dark">Soon</small>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
         
         {% if subscription %}
-        <!-- Current Plan Details -->
-        <div class="row mb-4">
-            <div class="col-lg-8">
-                <div class="dashboard-card">
-                    <h4 class="mb-3">Current Plan Details</h4>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <strong>Algorithm Version:</strong>
-                            <p class="mb-0">{{ subscription.plan_type.upper() }}</p>
+            <!-- Performance Metrics -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div class="dashboard-card">
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <h4 class="fw-bold mb-0">
+                                <i class="fas fa-chart-area me-2"></i>
+                                Performance Overview
+                            </h4>
+                            <small class="badge bg-info">Coming Soon</small>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Status:</strong>
-                            <p class="mb-0">
-                                <span class="badge bg-success">{{ subscription.status.title() }}</span>
-                            </p>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Monitoring Coins:</strong>
-                            <p class="mb-0">
-                                {% if subscription.coins %}
-                                    {{ subscription.coins.replace(',', ', ') }}
-                                {% else %}
-                                    Not configured
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Member Since:</strong>
-                            <p class="mb-0">{{ subscription.created_at.strftime('%B %d, %Y') }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="dashboard-card">
-                    <h5 class="mb-3">Algorithm Features</h5>
-                    {% if subscription.plan_type == 'v3' %}
-                        <ul class="list-unstyled">
-                            <li><i class="fas fa-check text-success me-2"></i>RSI Analysis</li>
-                            <li><i class="fas fa-times text-muted me-2"></i>MACD Analysis</li>
-                            <li><i class="fas fa-times text-muted me-2"></i>Momentum Analysis</li>
-                        </ul>
-                    {% elif subscription.plan_type == 'v6' %}
-                        <ul class="list-unstyled">
-                            <li><i class="fas fa-check text-success me-2"></i>RSI Analysis</li>
-                            <li><i class="fas fa-check text-success me-2"></i>MACD Analysis</li>
-                            <li><i class="fas fa-times text-muted me-2"></i>Momentum Analysis</li>
-                        </ul>
-                    {% elif subscription.plan_type == 'v9' %}
-                        <ul class="list-unstyled">
-                            <li><i class="fas fa-check text-success me-2"></i>RSI Analysis</li>
-                            <li><i class="fas fa-check text-success me-2"></i>MACD Analysis</li>
-                            <li><i class="fas fa-check text-success me-2"></i>Momentum Analysis</li>
-                        </ul>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Discord Setup Instructions -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="dashboard-card">
-                    <h4 class="mb-3">Discord Bot Setup</h4>
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle me-2"></i>How to connect the trading bot to your Discord server:</h6>
-                        <ol class="mb-0">
-                            <li>Contact our support team with your Discord Server ID</li>
-                            <li>We'll add the bot to your server and create dedicated channels</li>
-                            <li>Start receiving trading signals immediately!</li>
-                        </ol>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Your Discord User ID:</strong>
-                            <div class="input-group mt-2">
-                                <input type="text" class="form-control" 
-                                       value="{{ user.discord_user_id or 'Not configured' }}" readonly>
-                                <button class="btn btn-outline-secondary" type="button">Update</button>
+                        
+                        <div class="row g-4">
+                            <div class="col-lg-3 col-md-6">
+                                <div class="text-center p-4" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-radius: 16px;">
+                                    <i class="fas fa-percentage fa-2x mb-3" style="color: #3b82f6;"></i>
+                                    <div class="h3 fw-bold mb-2" style="color: #3b82f6;">73%</div>
+                                    <div class="fw-medium">Success Rate</div>
+                                    <small class="text-muted">Last 30 days</small>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <div class="text-center p-4" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 16px;">
+                                    <i class="fas fa-arrow-up fa-2x mb-3" style="color: #22c55e;"></i>
+                                    <div class="h3 fw-bold mb-2" style="color: #22c55e;">+24.5%</div>
+                                    <div class="fw-medium">Portfolio Growth</div>
+                                    <small class="text-muted">This month</small>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <div class="text-center p-4" style="background: linear-gradient(135deg, #fef7ff, #f3e8ff); border-radius: 16px;">
+                                    <i class="fas fa-bell fa-2x mb-3" style="color: #8b5cf6;"></i>
+                                    <div class="h3 fw-bold mb-2" style="color: #8b5cf6;">1,247</div>
+                                    <div class="fw-medium">Signals Sent</div>
+                                    <small class="text-muted">Total count</small>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <div class="text-center p-4" style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border-radius: 16px;">
+                                    <i class="fas fa-clock fa-2x mb-3" style="color: #f59e0b;"></i>
+                                    <div class="h3 fw-bold mb-2" style="color: #f59e0b;">2.3s</div>
+                                    <div class="fw-medium">Avg Response</div>
+                                    <small class="text-muted">Signal delivery</small>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <strong>Discord Server ID:</strong>
-                            <div class="input-group mt-2">
-                                <input type="text" class="form-control" 
-                                       value="{{ user.discord_server_id or 'Not configured' }}" readonly>
-                                <button class="btn btn-outline-secondary" type="button">Update</button>
+                        
+                        <div class="mt-4 p-4" style="background: var(--gray-50); border-radius: 12px;">
+                            <div class="text-center">
+                                <i class="fas fa-chart-line fa-3x mb-3" style="color: #d1d5db;"></i>
+                                <h5 class="fw-semibold mb-2">Detailed Analytics Coming Soon</h5>
+                                <p class="text-muted mb-0">
+                                    We're working on advanced performance tracking, profit/loss analytics, and detailed trading history.
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        {% else %}
-        <!-- No Subscription -->
-        <div class="row">
-            <div class="col-12">
-                <div class="text-center py-5">
-                    <i class="fas fa-robot fa-4x text-muted mb-4"></i>
-                    <h3 class="mb-3">No Active Subscription</h3>
-                    <p class="text-muted mb-4">Choose a plan to start receiving professional trading signals</p>
-                    <a href="{{ url_for('pricing') }}" class="btn btn-primary btn-lg">
-                        View Pricing Plans
-                    </a>
-                </div>
-            </div>
-        </div>
         {% endif %}
-        
-        <!-- Quick Stats -->
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <div class="dashboard-card text-center">
-                    <i class="fas fa-chart-line fa-2x mb-3"></i>
-                    <h5>Trading Signals</h5>
-                    <p class="text-muted mb-0">Real-time alerts</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="dashboard-card text-center">
-                    <i class="fab fa-discord fa-2x mb-3"></i>
-                    <h5>Discord Integration</h5>
-                    <p class="text-muted mb-0">Dedicated channels</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="dashboard-card text-center">
-                    <i class="fas fa-clock fa-2x mb-3"></i>
-                    <h5>24/7 Monitoring</h5>
-                    <p class="text-muted mb-0">Never miss a signal</p>
-                </div>
-            </div>
-        </div>
     </div>
 </section>
 {% endblock %}
