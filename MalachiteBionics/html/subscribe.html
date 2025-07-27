@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Subscribe to {{ plan_type.upper() }} - Trading Bot Service{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="text-center mb-5">
+                    <h1 class="display-5 fw-bold">Subscribe to {{ plan_type.upper() }}</h1>
+                    <p class="lead text-muted">Complete your subscription setup</p>
+                </div>
+                
+                <div class="card shadow-sm">
+                    <div class="card-body p-5">
+                        <!-- Plan Summary -->
+                        <div class="mb-5">
+                            <h4 class="mb-3">Plan Summary</h4>
+                            <div class="alert alert-light">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h5 class="mb-1">
+                                            {{ 'Basic' if plan_type == 'v3' else 'Classic' if plan_type == 'v6' else 'Premium' }} Plan ({{ plan_type.upper() }})
+                                        </h5>
+                                        <p class="text-muted mb-0">
+                                            {% if plan_type == 'v3' %}
+                                                RSI Algorithm for beginner traders
+                                            {% elif plan_type == 'v6' %}
+                                                RSI + MACD Algorithm for advanced traders
+                                            {% elif plan_type == 'v9' %}
+                                                Complete RSI + MACD + Momentum analysis
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-md-end">
+                                        <h4 class="mb-0">
+                                            £{{ '3' if plan_type == 'v3' else '5' if plan_type == 'v6' else '7.99' }}/month
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Cryptocurrency Selection -->
+                        <form id="subscription-form">
+                            <input type="hidden" name="plan_type" value="{{ plan_type }}">
+                            
+                            <div class="mb-5">
+                                <h4 class="mb-3">Select Cryptocurrencies to Monitor</h4>
+                                <p class="text-muted mb-4">
+                                    Choose which cryptocurrencies you want to receive trading signals for:
+                                </p>
+                                
+                                <div class="coin-selection">
+                                    <div class="coin-checkbox">
+                                        <input type="checkbox" id="SOL" name="coins" value="SOL" checked>
+                                        <label for="SOL">
+                                            <strong>SOL</strong><br>
+                                            <small class="text-muted">Solana</small>
+                                        </label>
+                                    </div>
+                                    <div class="coin-checkbox">
+                                        <input type="checkbox" id="RAY" name="coins" value="RAY" checked>
+                                        <label for="RAY">
+                                            <strong>RAY</strong><br>
+                                            <small class="text-muted">Raydium</small>
+                                        </label>
+                                    </div>
+                                    <div class="coin-checkbox">
+                                        <input type="checkbox" id="BTC" name="coins" value="BTC">
+                                        <label for="BTC">
+                                            <strong>BTC</strong><br>
+                                            <small class="text-muted">Bitcoin</small>
+                                        </label>
+                                    </div>
+                                    <div class="coin-checkbox">
+                                        <input type="checkbox" id="ETH" name="coins" value="ETH">
+                                        <label for="ETH">
+                                            <strong>ETH</strong><br>
+                                            <small class="text-muted">Ethereum</small>
+                                        </label>
+                                    </div>
+                                    <div class="coin-checkbox">
+                                        <input type="checkbox" id="ADA" name="coins" value="ADA">
+                                        <label for="ADA">
+                                            <strong>ADA</strong><br>
+                                            <small class="text-muted">Cardano</small>
+                                        </label>
+                                    </div>
+                                    <div class="coin-checkbox">
+                                        <input type="checkbox" id="DOT" name="coins" value="DOT">
+                                        <label for="DOT">
+                                            <strong>DOT</strong><br>
+                                            <small class="text-muted">Polkadot</small>
+                                        </label>
+                                    </div>
+                                    <div class="coin-checkbox">
+                                        <input type="checkbox" id="AVAX" name="coins" value="AVAX">
+                                        <label for="AVAX">
+                                            <strong>AVAX</strong><br>
+                                            <small class="text-muted">Avalanche</small>
+                                        </label>
+                                    </div>
+                                    <div class="coin-checkbox">
+                                        <input type="checkbox" id="MATIC" name="coins" value="MATIC">
+                                        <label for="MATIC">
+                                            <strong>MATIC</strong><br>
+                                            <small class="text-muted">Polygon</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                {% if plan_type == 'v3' %}
+                                    <small class="text-muted">You can select up to 5 cryptocurrencies with the Basic plan.</small>
+                                {% elif plan_type == 'v6' %}
+                                    <small class="text-muted">You can select up to 10 cryptocurrencies with the Classic plan.</small>
+                                {% else %}
+                                    <small class="text-muted">Unlimited cryptocurrencies with the Premium plan.</small>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Terms -->
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="terms" required>
+                                    <label class="form-check-label" for="terms">
+                                        I agree to the <a href="#" class="text-decoration-none">Terms of Service</a> 
+                                        and understand that this is a monthly subscription that will auto-renew.
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Payment Button -->
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary btn-lg px-5" id="checkout-button">
+                                    <i class="fas fa-lock me-2"></i>
+                                    Proceed to Payment
+                                </button>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        Secure payment powered by Stripe
+                                    </small>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Security Info -->
+                <div class="text-center mt-4">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <i class="fas fa-lock fa-2x mb-2"></i>
+                            <p class="small text-muted">256-bit SSL Encryption</p>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                            <p class="small text-muted">PCI DSS Compliant</p>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="fas fa-undo fa-2x mb-2"></i>
+                            <p class="small text-muted">7-Day Money Back</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const stripe = Stripe('{{ stripe_publishable_key }}');
+    const form = document.getElementById('subscription-form');
+    const button = document.getElementById('checkout-button');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Validate coin selection
+        const selectedCoins = Array.from(document.querySelectorAll('input[name="coins"]:checked'));
+        if (selectedCoins.length === 0) {
+            alert('Please select at least one cryptocurrency to monitor.');
+            return;
+        }
+        
+        // Check plan limits
+        const planType = '{{ plan_type }}';
+        if (planType === 'v3' && selectedCoins.length > 5) {
+            alert('Basic plan allows up to 5 cryptocurrencies. Please deselect some coins or upgrade your plan.');
+            return;
+        }
+        if (planType === 'v6' && selectedCoins.length > 10) {
+            alert('Classic plan allows up to 10 cryptocurrencies. Please deselect some coins or upgrade your plan.');
+            return;
+        }
+        
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        
+        try {
+            // Create checkout session
+            const formData = new FormData(form);
+            const response = await fetch('{{ url_for("create_checkout_session") }}', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Redirect to Stripe Checkout
+            window.location.href = data.checkout_url;
+            
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Payment setup failed: ' + error.message);
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-lock me-2"></i>Proceed to Payment';
+        }
+    });
+    
+    // Coin selection limit enforcement
+    const coinCheckboxes = document.querySelectorAll('input[name="coins"]');
+    const planType = '{{ plan_type }}';
+    const maxCoins = planType === 'v3' ? 5 : planType === 'v6' ? 10 : Infinity;
+    
+    coinCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const selected = document.querySelectorAll('input[name="coins"]:checked');
+            if (selected.length >= maxCoins && checkbox.checked) {
+                if (selected.length > maxCoins) {
+                    checkbox.checked = false;
+                    if (planType === 'v3') {
+                        alert('Basic plan allows up to 5 cryptocurrencies.');
+                    } else if (planType === 'v6') {
+                        alert('Classic plan allows up to 10 cryptocurrencies.');
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
