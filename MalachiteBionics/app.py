@@ -13,8 +13,16 @@ load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Configuration with fallbacks
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-secret-key-for-development')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///trading_bot.db')
+
+# Fix for Railway PostgreSQL URLs
+database_url = app.config['SQLALCHEMY_DATABASE_URI']
+if database_url and database_url.startswith('postgres://'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://', 1)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
@@ -404,6 +412,12 @@ def internal_error(error):
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    try:
+        with app.app_context():
+            db.create_all()
+            logger.info("Database tables created successfully")
+        app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    except Exception as e:
+        logger.error(f"Failed to start application: {e}")
+        print(f"Error: {e}")
+        raise
