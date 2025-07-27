@@ -1,234 +1,451 @@
 {% extends "base.html" %}
 
-{% block title %}Pricing - Trading Bot Service{% endblock %}
+{% block title %}Professional Trading Plans - Choose Your Algorithm{% endblock %}
 
 {% block content %}
-<section class="py-5">
+<!-- Hero Section -->
+<section class="py-6" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
     <div class="container">
-        <div class="text-center mb-5">
-            <h1 class="display-4 fw-bold">Choose Your Trading Plan</h1>
-            <p class="lead text-muted">Select the algorithm that matches your trading strategy</p>
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="display-4 fw-bold mb-4">
+                    Choose Your <span style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Trading Algorithm</span>
+                </h1>
+                <p class="lead text-muted mb-4">
+                    Professional trading strategies designed for different experience levels and risk tolerances. 
+                    Each plan includes Discord integration and 24/7 market monitoring.
+                </p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <span class="small">Cancel anytime</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <span class="small">No setup fees</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <span class="small">24/7 support</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Cards -->
+<section class="py-6">
+    <div class="container">
+        <div class="row g-4">
+            <!-- Basic Plan -->
+            <div class="col-lg-4">
+                <div class="pricing-card h-100">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6, #6366f1); border-radius: 20px;">
+                            <i class="fas fa-chart-line fa-2x text-white"></i>
+                        </div>
+                        <h3 class="fw-bold mb-2">Basic Algorithm</h3>
+                        <div class="mini-bio">Perfect for beginners entering crypto trading</div>
+                        <div class="d-flex align-items-baseline justify-content-center mb-3">
+                            <span class="h1 fw-bold">£3</span>
+                            <span class="text-muted ms-2">/month</span>
+                        </div>
+                        <p class="text-muted small">RSI-based signals for stable market entry points</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="fw-semibold mb-3">Algorithm Features:</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>RSI Analysis:</strong> Relative Strength Index signals
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Basic Signals:</strong> Buy/Sell recommendations
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Discord Integration:</strong> Real-time alerts
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Market Monitoring:</strong> 24/7 automated scanning
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="fw-semibold mb-3">What's Included:</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Up to 3 cryptocurrency pairs
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Basic risk management alerts
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Community Discord access
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Email support
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-auto">
+                        {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('subscribe', plan_type='v3') }}" class="btn btn-primary w-100 btn-lg">
+                                <i class="fas fa-rocket me-2"></i>Choose Basic
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('register') }}" class="btn btn-primary w-100 btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Sign Up to Start
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Classic Plan -->
+            <div class="col-lg-4">
+                <div class="pricing-card featured h-100">
+                    <div class="badge">Most Popular</div>
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 20px;">
+                            <i class="fas fa-chart-bar fa-2x text-white"></i>
+                        </div>
+                        <h3 class="fw-bold mb-2">Classic Algorithm</h3>
+                        <div class="mini-bio">Advanced multi-indicator analysis for serious traders</div>
+                        <div class="d-flex align-items-baseline justify-content-center mb-3">
+                            <span class="h1 fw-bold">£5</span>
+                            <span class="text-muted ms-2">/month</span>
+                        </div>
+                        <p class="text-muted small">RSI + MACD combination for enhanced accuracy</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="fw-semibold mb-3">Algorithm Features:</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>RSI + MACD:</strong> Dual-indicator analysis
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Enhanced Signals:</strong> Higher accuracy predictions
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Trend Analysis:</strong> Market direction insights
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Priority Alerts:</strong> Faster signal delivery
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="fw-semibold mb-3">What's Included:</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Up to 6 cryptocurrency pairs
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Advanced risk management
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                VIP Discord channels
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Priority support
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Weekly market analysis
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-auto">
+                        {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('subscribe', plan_type='v6') }}" class="btn btn-primary w-100 btn-lg">
+                                <i class="fas fa-crown me-2"></i>Choose Classic
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('register') }}" class="btn btn-primary w-100 btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Sign Up to Start
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Premium Plan -->
+            <div class="col-lg-4">
+                <div class="pricing-card h-100">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 20px;">
+                            <i class="fas fa-brain fa-2x text-white"></i>
+                        </div>
+                        <h3 class="fw-bold mb-2">Premium Algorithm</h3>
+                        <div class="mini-bio">Professional-grade AI with momentum analysis</div>
+                        <div class="d-flex align-items-baseline justify-content-center mb-3">
+                            <span class="h1 fw-bold">£7.99</span>
+                            <span class="text-muted ms-2">/month</span>
+                        </div>
+                        <p class="text-muted small">RSI + MACD + Momentum for maximum performance</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="fw-semibold mb-3">Algorithm Features:</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Triple Analysis:</strong> RSI + MACD + Momentum
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>AI Predictions:</strong> Machine learning insights
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Market Sentiment:</strong> Social & news analysis
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Instant Alerts:</strong> Millisecond notifications
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="fw-semibold mb-3">What's Included:</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Unlimited cryptocurrency pairs
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Advanced portfolio analytics
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Exclusive trader community
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Direct support line
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Custom strategy consultation
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-auto">
+                        {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('subscribe', plan_type='v9') }}" class="btn btn-primary w-100 btn-lg">
+                                <i class="fas fa-gem me-2"></i>Choose Premium
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('register') }}" class="btn btn-primary w-100 btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Sign Up to Start
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Comparison Table -->
+<section class="py-6" style="background: var(--gray-50);">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-5 fw-bold mb-4">Compare All Features</h2>
+                <p class="lead text-muted">
+                    Detailed breakdown of what's included in each trading algorithm
+                </p>
+            </div>
         </div>
         
         <div class="row">
-            <!-- V3 Plan -->
-            <div class="col-lg-4 mb-4">
-                <div class="pricing-card text-center h-100">
-                    <h3 class="fw-bold mb-3">Basic</h3>
-                    <div class="display-4 fw-bold mb-3">£3<small class="fs-6 text-muted">/month</small></div>
-                    <p class="text-muted mb-4">Perfect for beginners using RSI analysis</p>
-                    
-                    <ul class="list-unstyled text-start mb-4">
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>RSI Algorithm (v3)</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 5 Cryptocurrencies</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Discord Integration</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Real-time Alerts</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>24/7 Monitoring</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Email Support</li>
-                    </ul>
-                    
-                    <div class="mb-4">
-                        <small class="text-muted" style="opacity: 0.7;">
-                            Simple RSI signals for new traders. Get buy/sell alerts when coins are oversold or overbought.
-                        </small>
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-borderless">
+                                <thead>
+                                    <tr>
+                                        <th class="fw-bold py-3">Features</th>
+                                        <th class="text-center fw-bold py-3">Basic<br><small class="text-muted">£3/month</small></th>
+                                        <th class="text-center fw-bold py-3">Classic<br><small class="text-muted">£5/month</small></th>
+                                        <th class="text-center fw-bold py-3">Premium<br><small class="text-muted">£7.99/month</small></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="py-3">Technical Indicators</td>
+                                        <td class="text-center py-3">RSI Only</td>
+                                        <td class="text-center py-3">RSI + MACD</td>
+                                        <td class="text-center py-3">RSI + MACD + Momentum</td>
+                                    </tr>
+                                    <tr style="background: var(--gray-50);">
+                                        <td class="py-3">Cryptocurrency Pairs</td>
+                                        <td class="text-center py-3">Up to 3</td>
+                                        <td class="text-center py-3">Up to 6</td>
+                                        <td class="text-center py-3">Unlimited</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-3">Discord Integration</td>
+                                        <td class="text-center py-3"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center py-3"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center py-3"><i class="fas fa-check text-success"></i></td>
+                                    </tr>
+                                    <tr style="background: var(--gray-50);">
+                                        <td class="py-3">Real-time Alerts</td>
+                                        <td class="text-center py-3"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center py-3"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center py-3"><i class="fas fa-check text-success"></i></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-3">Risk Management</td>
+                                        <td class="text-center py-3">Basic</td>
+                                        <td class="text-center py-3">Advanced</td>
+                                        <td class="text-center py-3">Professional</td>
+                                    </tr>
+                                    <tr style="background: var(--gray-50);">
+                                        <td class="py-3">Market Analysis</td>
+                                        <td class="text-center py-3">-</td>
+                                        <td class="text-center py-3">Weekly</td>
+                                        <td class="text-center py-3">Daily</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-3">AI Predictions</td>
+                                        <td class="text-center py-3">-</td>
+                                        <td class="text-center py-3">-</td>
+                                        <td class="text-center py-3"><i class="fas fa-check text-success"></i></td>
+                                    </tr>
+                                    <tr style="background: var(--gray-50);">
+                                        <td class="py-3">Support Level</td>
+                                        <td class="text-center py-3">Email</td>
+                                        <td class="text-center py-3">Priority</td>
+                                        <td class="text-center py-3">Direct Line</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    
-                    {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('subscribe', plan_type='v3') }}" class="btn btn-outline-primary btn-lg w-100">
-                            Choose Basic
-                        </a>
-                    {% else %}
-                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg w-100">
-                            Get Started
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <!-- V6 Plan -->
-            <div class="col-lg-4 mb-4">
-                <div class="pricing-card text-center h-100 featured">
-                    <span class="badge">Most Popular</span>
-                    <h3 class="fw-bold mb-3">Classic</h3>
-                    <div class="display-4 fw-bold mb-3">£5<small class="fs-6 text-muted">/month</small></div>
-                    <p class="text-muted mb-4">Advanced RSI + MACD analysis for serious traders</p>
-                    
-                    <ul class="list-unstyled text-start mb-4">
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>RSI + MACD Algorithm (v6)</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 10 Cryptocurrencies</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Discord Integration</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Real-time Alerts</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>24/7 Monitoring</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Priority Support</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Advanced Analytics</li>
-                    </ul>
-                    
-                    <div class="mb-4">
-                        <small class="text-muted" style="opacity: 0.7;">
-                            Enhanced signals combining RSI momentum with MACD trend analysis for better accuracy.
-                        </small>
-                    </div>
-                    
-                    {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('subscribe', plan_type='v6') }}" class="btn btn-primary btn-lg w-100">
-                            Choose Classic
-                        </a>
-                    {% else %}
-                        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg w-100">
-                            Get Started
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <!-- V9 Plan -->
-            <div class="col-lg-4 mb-4">
-                <div class="pricing-card text-center h-100">
-                    <h3 class="fw-bold mb-3">Premium</h3>
-                    <div class="display-4 fw-bold mb-3">£7.99<small class="fs-6 text-muted">/month</small></div>
-                    <p class="text-muted mb-4">Complete RSI + MACD + Momentum analysis</p>
-                    
-                    <ul class="list-unstyled text-start mb-4">
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Full Algorithm Suite (v9)</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Unlimited Cryptocurrencies</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Discord Integration</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Real-time Alerts</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>24/7 Monitoring</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>VIP Support</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Advanced Analytics</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Custom Indicators</li>
-                    </ul>
-                    
-                    <div class="mb-4">
-                        <small class="text-muted" style="opacity: 0.7;">
-                            Professional grade signals with momentum analysis for precise market timing and maximum profit potential.
-                        </small>
-                    </div>
-                    
-                    {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('subscribe', plan_type='v9') }}" class="btn btn-outline-primary btn-lg w-100">
-                            Choose Premium
-                        </a>
-                    {% else %}
-                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg w-100">
-                            Get Started
-                        </a>
-                    {% endif %}
                 </div>
             </div>
         </div>
-        
-        <!-- Features Comparison -->
-        <div class="mt-5">
-            <h2 class="text-center mb-4">Algorithm Comparison</h2>
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Feature</th>
-                            <th class="text-center">Basic (v3)</th>
-                            <th class="text-center">Classic (v6)</th>
-                            <th class="text-center">Premium (v9)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>RSI Analysis</strong></td>
-                            <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                            <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                            <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                        </tr>
-                        <tr>
-                            <td><strong>MACD Analysis</strong></td>
-                            <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                            <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                            <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Momentum Analysis</strong></td>
-                            <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                            <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                            <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Signal Accuracy</strong></td>
-                            <td class="text-center">Good</td>
-                            <td class="text-center">Better</td>
-                            <td class="text-center">Best</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Cryptocurrencies</strong></td>
-                            <td class="text-center">Up to 5</td>
-                            <td class="text-center">Up to 10</td>
-                            <td class="text-center">Unlimited</td>
-                        </tr>
-                    </tbody>
-                </table>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="py-6">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-5 fw-bold mb-4">Frequently Asked Questions</h2>
             </div>
         </div>
         
-        <!-- FAQ Section -->
-        <div class="mt-5">
-            <h2 class="text-center mb-4">Frequently Asked Questions</h2>
-            <div class="row">
-                <div class="col-lg-8 mx-auto">
-                    <div class="accordion" id="faqAccordion">
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                    How does the Discord integration work?
-                                </button>
-                            </h2>
-                            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Our bot creates dedicated channels in your Discord server for each cryptocurrency you're monitoring. 
-                                    You'll receive instant buy/sell signals with detailed analysis directly in these channels.
-                                </div>
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item mb-3" style="border: none; border-radius: 12px; overflow: hidden;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                How do the trading algorithms work?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Our algorithms analyze technical indicators in real-time. Basic uses RSI signals, Classic combines RSI with MACD for better accuracy, and Premium adds momentum analysis plus AI predictions for maximum performance.
                             </div>
                         </div>
-                        
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                    Can I change my plan later?
-                                </button>
-                            </h2>
-                            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle.
-                                </div>
+                    </div>
+                    
+                    <div class="accordion-item mb-3" style="border: none; border-radius: 12px; overflow: hidden;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                Can I cancel my subscription anytime?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yes, you can cancel your subscription at any time. Your access will continue until the end of your current billing period, and no additional charges will apply.
                             </div>
                         </div>
-                        
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                    What cryptocurrencies are supported?
-                                </button>
-                            </h2>
-                            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    We support all major cryptocurrencies including SOL, RAY, BTC, ETH, ADA, DOT, and many more. 
-                                    You can select which ones to monitor based on your plan.
-                                </div>
+                    </div>
+                    
+                    <div class="accordion-item mb-3" style="border: none; border-radius: 12px; overflow: hidden;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                Which cryptocurrencies are supported?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                We support major cryptocurrencies including Bitcoin (BTC), Ethereum (ETH), Solana (SOL), Cardano (ADA), Polkadot (DOT), Chainlink (LINK), and many others. You can select which ones to monitor based on your plan.
                             </div>
                         </div>
-                        
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
-                                    Is there a money-back guarantee?
-                                </button>
-                            </h2>
-                            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Yes, we offer a 7-day money-back guarantee. If you're not satisfied with our service, 
-                                    contact us within 7 days for a full refund.
-                                </div>
+                    </div>
+                    
+                    <div class="accordion-item" style="border: none; border-radius: 12px; overflow: hidden;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                Do you provide trading advice?
+                            </button>
+                        </h2>
+                        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                We provide technical analysis signals and market insights, but this is not financial advice. Always do your own research and consider your risk tolerance before making trading decisions.
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-6" style="background: linear-gradient(135deg, #000000 0%, #262626 100%); color: white;">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-5 fw-bold mb-4">Start Trading Smarter Today</h2>
+                <p class="lead mb-4">
+                    Join hundreds of successful traders using our proven algorithms to maximize profits and minimize risks.
+                </p>
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-user-plus me-2"></i>Create Free Account
+                    </a>
+                {% endif %}
+                <a href="#" class="btn btn-outline-light btn-lg" onclick="window.scrollTo({top: 0, behavior: 'smooth'});">
+                    <i class="fas fa-arrow-up me-2"></i>Back to Plans
+                </a>
             </div>
         </div>
     </div>
