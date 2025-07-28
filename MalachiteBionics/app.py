@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+rom flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
@@ -9,6 +9,8 @@ import stripe
 import os
 import logging
 import secrets
+import json
+import uuid
 import uuid
 from dotenv import load_dotenv
 
@@ -96,6 +98,9 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     login_count = db.Column(db.Integer, default=0)
+    
+    # Admin role support
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
     
     discord_user_id = db.Column(db.String(50), unique=True)
     discord_server_id = db.Column(db.String(50))
@@ -223,6 +228,31 @@ def send_verification_email(user):
         logger.error(f"Failed to send verification email to {user.email}: {e}")
         return False
 
+# Admin decorator and utilities
+from functools import wraps
+
+def admin_required(f):
+    """Decorator to require admin access"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('login'))
+        if not current_user.is_admin:
+            flash('Access denied. Admin privileges required.', 'error')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Custom Jinja filters
+@app.template_filter('from_json')
+def from_json_filter(json_str):
+    """Convert JSON string to Python object"""
+    try:
+        return json.loads(json_str) if json_str else []
+    except (json.JSONDecodeError, TypeError):
+        return []
+
 # Routes
 @app.route('/')
 def index():
@@ -298,20 +328,43 @@ def init_database():
             # Force recreate tables
             db.create_all()
             
-            # Ensure admin user exists
+            info = []
+            
+            # Ensure admin user exists and is admin
             admin = User.query.filter_by(email='admin@tradingbot.com').first()
             if not admin:
-                admin = User(email='admin@tradingbot.com', display_name='Admin')
+                admin = User(
+                    email='admin@tradingbot.com', 
+                    display_name='Admin',
+                    is_admin=True,
+                    email_verified=True
+                )
                 admin.set_password('admin123')
                 db.session.add(admin)
-                db.session.commit()
+                info.append("Created admin@tradingbot.com (password: admin123)")
+            else:
+                admin.is_admin = True
+                admin.email_verified = True
+                info.append("Updated admin@tradingbot.com to admin status")
+            
+            # Make the first user (if exists) an admin too
+            first_user = User.query.filter(User.email != 'admin@tradingbot.com').first()
+            if first_user:
+                first_user.is_admin = True
+                first_user.email_verified = True
+                info.append(f"Made {first_user.email} an admin user")
+            
+            db.session.commit()
             
             user_count = User.query.count()
+            admin_count = User.query.filter_by(is_admin=True).count()
             
             return jsonify({
                 'success': True, 
                 'message': 'Database initialized successfully',
-                'total_users': user_count
+                'total_users': user_count,
+                'admin_users': admin_count,
+                'info': info
             })
             
     except Exception as e:
@@ -871,6 +924,185 @@ def delete_account():
         flash('An error occurred while deleting your account. Please try again.', 'error')
         logger.error(f"Account deletion error: {e}")
         return redirect(url_for('settings'))
+
+# Admin Routes
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """Admin dashboard with user management"""
+    try:
+        # Get all users with their subscription information
+        users = db.session.query(User).outerjoin(Subscription).all()
+        
+        # Get statistics
+        total_users = User.query.count()
+        active_users = User.query.filter_by(is_active=True).count()
+        verified_users = User.query.filter_by(email_verified=True).count()
+        admin_users = User.query.filter_by(is_admin=True).count()
+        
+        # Get subscription statistics
+        active_subscriptions = Subscription.query.filter_by(status='active').count()
+        total_subscriptions = Subscription.query.count()
+        
+        # Get recent users (last 30 days)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_users = User.query.filter(User.created_at >= thirty_days_ago).count()
+        
+        stats = {
+            'total_users': total_users,
+            'active_users': active_users,
+            'verified_users': verified_users,
+            'admin_users': admin_users,
+            'active_subscriptions': active_subscriptions,
+            'total_subscriptions': total_subscriptions,
+            'recent_users': recent_users
+        }
+        
+        return render_template('admin/dashboard.html', users=users, stats=stats)
+        
+    except Exception as e:
+        logger.error(f"Admin dashboard error: {e}")
+        flash('Error loading admin dashboard.', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/admin/user/<int:user_id>')
+@admin_required
+def admin_user_detail(user_id):
+    """Detailed view of a specific user"""
+    try:
+        user = User.query.get_or_404(user_id)
+        subscriptions = Subscription.query.filter_by(user_id=user_id).order_by(Subscription.created_at.desc()).all()
+        
+        return render_template('admin/user_detail.html', user=user, subscriptions=subscriptions)
+        
+    except Exception as e:
+        logger.error(f"Admin user detail error: {e}")
+        flash('Error loading user details.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/user/<int:user_id>/toggle-status', methods=['POST'])
+@admin_required
+def admin_toggle_user_status(user_id):
+    """Toggle user active/inactive status"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Prevent admin from deactivating themselves
+        if user.id == current_user.id:
+            flash('You cannot deactivate your own account.', 'error')
+            return redirect(url_for('admin_user_detail', user_id=user_id))
+        
+        user.is_active = not user.is_active
+        db.session.commit()
+        
+        status = "activated" if user.is_active else "deactivated"
+        flash(f'User {user.email} has been {status}.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Admin toggle user status error: {e}")
+        flash('Error updating user status.', 'error')
+    
+    return redirect(url_for('admin_user_detail', user_id=user_id))
+
+@app.route('/admin/user/<int:user_id>/toggle-admin', methods=['POST'])
+@admin_required
+def admin_toggle_admin_status(user_id):
+    """Toggle user admin status"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Prevent admin from removing their own admin status
+        if user.id == current_user.id:
+            flash('You cannot remove your own admin privileges.', 'error')
+            return redirect(url_for('admin_user_detail', user_id=user_id))
+        
+        user.is_admin = not user.is_admin
+        db.session.commit()
+        
+        status = "granted" if user.is_admin else "removed"
+        flash(f'Admin privileges {status} for {user.email}.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Admin toggle admin status error: {e}")
+        flash('Error updating admin status.', 'error')
+    
+    return redirect(url_for('admin_user_detail', user_id=user_id))
+
+@app.route('/admin/user/<int:user_id>/update-subscription', methods=['POST'])
+@admin_required
+def admin_update_user_subscription(user_id):
+    """Update user's subscription and cryptocurrency selection"""
+    try:
+        user = User.query.get_or_404(user_id)
+        plan_type = request.form.get('plan_type')
+        coins = request.form.getlist('coins')  # Get list of selected coins
+        
+        # Validate plan type
+        valid_plans = ['v3', 'v6', 'v9', 'elite']
+        if plan_type not in valid_plans:
+            flash('Invalid plan type selected.', 'error')
+            return redirect(url_for('admin_user_detail', user_id=user_id))
+        
+        # Validate coin selection (max 2 for non-elite plans)
+        if plan_type != 'elite' and len(coins) > 2:
+            flash('Non-elite plans are limited to 2 cryptocurrency pairs.', 'error')
+            return redirect(url_for('admin_user_detail', user_id=user_id))
+        
+        # Find or create subscription
+        subscription = Subscription.query.filter_by(user_id=user_id, status='active').first()
+        if not subscription:
+            subscription = Subscription(user_id=user_id)
+            db.session.add(subscription)
+        
+        # Update subscription
+        subscription.plan_type = plan_type
+        subscription.coins = json.dumps(coins)
+        subscription.status = 'active'
+        subscription.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        flash(f'Subscription updated for {user.email}: {plan_type} plan with {len(coins)} coins.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Admin update subscription error: {e}")
+        flash('Error updating subscription.', 'error')
+    
+    return redirect(url_for('admin_user_detail', user_id=user_id))
+
+@app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_user(user_id):
+    """Delete user account (admin only)"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Prevent admin from deleting themselves
+        if user.id == current_user.id:
+            flash('You cannot delete your own account.', 'error')
+            return redirect(url_for('admin_user_detail', user_id=user_id))
+        
+        # Store email for flash message
+        user_email = user.email
+        
+        # Delete associated subscriptions first
+        Subscription.query.filter_by(user_id=user_id).delete()
+        
+        # Delete user
+        db.session.delete(user)
+        db.session.commit()
+        
+        flash(f'User {user_email} has been permanently deleted.', 'success')
+        return redirect(url_for('admin_dashboard'))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Admin delete user error: {e}")
+        flash('Error deleting user.', 'error')
+        return redirect(url_for('admin_user_detail', user_id=user_id))
 
 # Error handlers
 @app.errorhandler(404)
