@@ -5,123 +5,263 @@
 {% block content %}
 <div class="container py-5">
     <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="h4 mb-0">
-                        <i class="fas fa-cog me-2"></i>Account Settings
-                    </h2>
-                </div>
-                <div class="card-body">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+        <div class="col-lg-10 mx-auto">
+            <!-- Page Header -->
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold">Account Settings</h1>
+                <p class="lead text-muted">Manage your account preferences and security settings</p>
+            </div>
 
-                    <!-- Change Password Section -->
-                    <div class="settings-section mb-5">
-                        <h5 class="fw-bold mb-3">
-                            <i class="fas fa-lock me-2"></i>Change Password
-                        </h5>
-                        <form method="POST" action="{{ url_for('change_password') }}" class="needs-validation" novalidate>
-                            <div class="mb-3">
-                                <label for="current_password" class="form-label">Current Password</label>
-                                <input type="password" class="form-control" id="current_password" name="current_password" required>
-                                <div class="invalid-feedback">
-                                    Please enter your current password.
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="new_password" class="form-label">New Password</label>
-                                <input type="password" class="form-control" id="new_password" name="new_password" required minlength="6">
-                                <div class="invalid-feedback">
-                                    Password must be at least 6 characters long.
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="confirm_password" class="form-label">Confirm New Password</label>
-                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                                <div class="invalid-feedback">
-                                    Please confirm your new password.
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>Update Password
-                            </button>
-                        </form>
-                    </div>
-
-                    <hr>
-
-                    <!-- Change Email Section -->
-                    <div class="settings-section mb-5">
-                        <h5 class="fw-bold mb-3">
-                            <i class="fas fa-envelope me-2"></i>Change Email Address
-                        </h5>
-                        <div class="mb-3">
-                            <label class="form-label">Current Email</label>
-                            <input type="email" class="form-control" value="{{ current_user.email }}" readonly>
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' if category == 'info' else 'warning' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                        <form method="POST" action="{{ url_for('change_email') }}" class="needs-validation" novalidate>
-                            <div class="mb-3">
-                                <label for="password_for_email" class="form-label">Enter Password to Verify</label>
-                                <input type="password" class="form-control" id="password_for_email" name="password_for_email" required>
-                                <div class="invalid-feedback">
-                                    Please enter your password to verify your identity.
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="row">
+                <!-- Customization Section -->
+                <div class="col-lg-6 mb-4">
+                    <div class="settings-category-card">
+                        <div class="category-header">
+                            <div class="d-flex align-items-center">
+                                <div class="category-icon bg-primary">
+                                    <i class="fas fa-palette text-white"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <h3 class="fw-bold mb-1">Customization</h3>
+                                    <p class="text-muted mb-0">Personalize your account appearance</p>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label for="new_email" class="form-label">New Email Address</label>
-                                <input type="email" class="form-control" id="new_email" name="new_email" required>
-                                <div class="invalid-feedback">
-                                    Please enter a valid email address.
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>Update Email
-                            </button>
-                        </form>
-                    </div>
-
-                    <hr>
-
-                    <!-- Account Deletion Section -->
-                    <div class="settings-section">
-                        <h5 class="fw-bold mb-3 text-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>Delete Account
-                        </h5>
-                        <div class="alert alert-warning">
-                            <strong>Warning:</strong> This action cannot be undone. All your data, including subscription information, will be permanently deleted.
                         </div>
-                        <form method="POST" action="{{ url_for('delete_account') }}" class="needs-validation" novalidate id="deleteForm">
-                            <div class="mb-3">
-                                <label for="password_for_deletion" class="form-label">Enter Password to Confirm Deletion</label>
-                                <input type="password" class="form-control" id="password_for_deletion" name="password_for_deletion" required>
-                                <div class="invalid-feedback">
-                                    Please enter your password to confirm account deletion.
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="confirm_deletion" name="confirm_deletion" required>
-                                    <label class="form-check-label" for="confirm_deletion">
-                                        I understand that this action is permanent and cannot be undone
-                                    </label>
-                                    <div class="invalid-feedback">
-                                        You must confirm that you understand this action is permanent.
+
+                        <div class="category-content">
+                            <!-- Display Name Section -->
+                            <div class="settings-item">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h5 class="fw-bold mb-1">Display Name</h5>
+                                        <p class="text-muted small mb-0">This name appears on your dashboard and profile</p>
                                     </div>
+                                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#displayNameForm">
+                                        <i class="fas fa-edit me-1"></i>Edit
+                                    </button>
+                                </div>
+                                
+                                <div class="current-setting mb-3">
+                                    <span class="badge bg-light text-dark px-3 py-2">
+                                        <i class="fas fa-user me-2"></i>{{ current_user.display_name }}
+                                    </span>
+                                </div>
+
+                                <div class="collapse" id="displayNameForm">
+                                    <form method="POST" action="{{ url_for('change_display_name') }}" class="needs-validation" novalidate>
+                                        <div class="mb-3">
+                                            <label for="new_display_name" class="form-label">New Display Name</label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="new_display_name" 
+                                                   name="new_display_name" 
+                                                   value="{{ current_user.display_name }}"
+                                                   required 
+                                                   minlength="2" 
+                                                   maxlength="50">
+                                            <div class="form-text">Must be between 2-50 characters</div>
+                                            <div class="invalid-feedback">
+                                                Display name must be between 2-50 characters.
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-save me-1"></i>Save Changes
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#displayNameForm">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
-                            <button type="submit" class="btn btn-danger" onclick="return confirmDeletion()">
-                                <i class="fas fa-trash me-2"></i>Delete My Account
-                            </button>
-                        </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Section -->
+                <div class="col-lg-6 mb-4">
+                    <div class="settings-category-card">
+                        <div class="category-header">
+                            <div class="d-flex align-items-center">
+                                <div class="category-icon bg-success">
+                                    <i class="fas fa-shield-alt text-white"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <h3 class="fw-bold mb-1">Security</h3>
+                                    <p class="text-muted mb-0">Manage your account security settings</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="category-content">
+                            <!-- Change Password -->
+                            <div class="settings-item mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h5 class="fw-bold mb-1">Password</h5>
+                                        <p class="text-muted small mb-0">Keep your account secure with a strong password</p>
+                                    </div>
+                                    <button class="btn btn-outline-success btn-sm" data-bs-toggle="collapse" data-bs-target="#passwordForm">
+                                        <i class="fas fa-key me-1"></i>Change
+                                    </button>
+                                </div>
+
+                                <div class="collapse" id="passwordForm">
+                                    <form method="POST" action="{{ url_for('change_password') }}" class="needs-validation" novalidate>
+                                        <div class="mb-3">
+                                            <label for="current_password" class="form-label">Current Password</label>
+                                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                            <div class="invalid-feedback">Please enter your current password.</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="new_password" class="form-label">New Password</label>
+                                            <input type="password" class="form-control" id="new_password" name="new_password" required minlength="8">
+                                            <div class="form-text">Must be at least 8 characters</div>
+                                            <div class="invalid-feedback">Password must be at least 8 characters long.</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                            <div class="invalid-feedback">Please confirm your new password.</div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-save me-1"></i>Update Password
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#passwordForm">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Change Email -->
+                            <div class="settings-item">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h5 class="fw-bold mb-1">Email Address</h5>
+                                        <p class="text-muted small mb-0">Update your account email address</p>
+                                    </div>
+                                    <button class="btn btn-outline-success btn-sm" data-bs-toggle="collapse" data-bs-target="#emailForm">
+                                        <i class="fas fa-envelope me-1"></i>Change
+                                    </button>
+                                </div>
+
+                                <div class="current-setting mb-3">
+                                    <span class="badge bg-light text-dark px-3 py-2">
+                                        <i class="fas fa-envelope me-2"></i>{{ current_user.email }}
+                                        {% if current_user.email_verified %}
+                                            <i class="fas fa-check-circle text-success ms-2" title="Verified"></i>
+                                        {% else %}
+                                            <i class="fas fa-exclamation-triangle text-warning ms-2" title="Not Verified"></i>
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                <div class="collapse" id="emailForm">
+                                    <form method="POST" action="{{ url_for('change_email') }}" class="needs-validation" novalidate>
+                                        <div class="mb-3">
+                                            <label for="password_for_email" class="form-label">Enter Password to Verify</label>
+                                            <input type="password" class="form-control" id="password_for_email" name="password_for_email" required>
+                                            <div class="invalid-feedback">Please enter your password to verify your identity.</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="new_email" class="form-label">New Email Address</label>
+                                            <input type="email" class="form-control" id="new_email" name="new_email" required>
+                                            <div class="form-text">You'll need to verify the new email address</div>
+                                            <div class="invalid-feedback">Please enter a valid email address.</div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-save me-1"></i>Update Email
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#emailForm">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="danger-zone-card">
+                        <div class="category-header">
+                            <div class="d-flex align-items-center">
+                                <div class="category-icon bg-danger">
+                                    <i class="fas fa-exclamation-triangle text-white"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <h3 class="fw-bold mb-1 text-danger">Danger Zone</h3>
+                                    <p class="text-muted mb-0">Irreversible and destructive actions</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="category-content">
+                            <div class="settings-item">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h5 class="fw-bold mb-1 text-danger">Delete Account</h5>
+                                        <p class="text-muted small mb-0">Permanently delete your account and all data</p>
+                                    </div>
+                                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="collapse" data-bs-target="#deleteForm">
+                                        <i class="fas fa-trash me-1"></i>Delete
+                                    </button>
+                                </div>
+
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Warning:</strong> This action cannot be undone. All your data, including subscription information, will be permanently deleted.
+                                </div>
+
+                                <div class="collapse" id="deleteForm">
+                                    <form method="POST" action="{{ url_for('delete_account') }}" class="needs-validation" novalidate id="deleteAccountForm">
+                                        <div class="mb-3">
+                                            <label for="password_for_deletion" class="form-label">Enter Password to Confirm Deletion</label>
+                                            <input type="password" class="form-control" id="password_for_deletion" name="password_for_deletion" required>
+                                            <div class="invalid-feedback">Please enter your password to confirm account deletion.</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="confirm_deletion" name="confirm_deletion" required>
+                                                <label class="form-check-label" for="confirm_deletion">
+                                                    I understand that this action is permanent and cannot be undone
+                                                </label>
+                                                <div class="invalid-feedback">You must confirm that you understand this action is permanent.</div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirmDeletion()">
+                                                <i class="fas fa-trash me-1"></i>Delete My Account
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#deleteForm">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,24 +303,78 @@ document.getElementById('confirm_password').addEventListener('input', function()
 function confirmDeletion() {
     return confirm('Are you absolutely sure you want to delete your account? This action cannot be undone and will permanently remove all your data.');
 }
+
+// Auto-collapse forms when switching between them
+document.addEventListener('DOMContentLoaded', function() {
+    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    collapseElements.forEach(function(element) {
+        element.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-bs-target');
+            const allCollapses = document.querySelectorAll('.collapse.show');
+            allCollapses.forEach(function(collapse) {
+                if (collapse.id !== targetId.substring(1)) {
+                    const bsCollapse = new bootstrap.Collapse(collapse, {
+                        toggle: false
+                    });
+                    bsCollapse.hide();
+                }
+            });
+        });
+    });
+});
 </script>
 
 <style>
-.settings-section {
-    padding: 1.5rem 0;
-}
-
-.card {
-    border-radius: 15px;
-    border: none;
+.settings-category-card {
+    background: white;
+    border-radius: 20px;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+    height: 100%;
+    border: 1px solid #e2e8f0;
 }
 
-.card-header {
+.danger-zone-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+    border: 2px solid #fee2e2;
+}
+
+.category-header {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    padding: 2rem;
     border-bottom: 1px solid #e2e8f0;
-    border-radius: 15px 15px 0 0 !important;
-    padding: 1.5rem;
+}
+
+.category-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.category-content {
+    padding: 2rem;
+}
+
+.settings-item {
+    padding: 1.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.settings-item:last-child {
+    border-bottom: none;
+}
+
+.current-setting .badge {
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #e2e8f0;
 }
 
 .form-control:focus {
@@ -191,6 +385,7 @@ function confirmDeletion() {
 .btn-primary {
     background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     border: none;
+    transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
@@ -198,14 +393,59 @@ function confirmDeletion() {
     transform: translateY(-1px);
 }
 
+.btn-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+}
+
 .btn-danger {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     border: none;
+    transition: all 0.3s ease;
 }
 
 .btn-danger:hover {
     background: linear-gradient(135deg, #dc2626, #b91c1c);
     transform: translateY(-1px);
+}
+
+.btn-outline-primary, .btn-outline-success, .btn-outline-danger {
+    transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover, .btn-outline-success:hover, .btn-outline-danger:hover {
+    transform: translateY(-1px);
+}
+
+.alert {
+    border: none;
+    border-radius: 12px;
+    border-left: 4px solid;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fffbeb, #fefce8);
+    border-left-color: #f59e0b;
+}
+
+@media (max-width: 768px) {
+    .category-header {
+        padding: 1.5rem;
+    }
+    
+    .category-content {
+        padding: 1.5rem;
+    }
+    
+    .settings-item {
+        padding: 1rem 0;
+    }
 }
 </style>
 {% endblock %}
