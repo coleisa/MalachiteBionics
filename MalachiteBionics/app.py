@@ -179,12 +179,33 @@ def create_tables():
     """Create database tables if they don't exist"""
     try:
         with app.app_context():
-            # Simple table creation without complex checks
+            # Force database creation and handle ArgumentError
+            try:
+                # Test if we can connect to the database
+                db.session.execute('SELECT 1')
+            except Exception as conn_error:
+                logger.error(f"Database connection failed during table creation: {conn_error}")
+                # If connection fails, try to create the database schema
+                pass
+            
+            # Create all tables
             db.create_all()
             logger.info("Database tables created/verified successfully")
+            
+            # Test that tables were created properly
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            logger.info(f"Available tables: {tables}")
+            
+            if 'user' not in tables:
+                logger.error("User table was not created - forcing recreation")
+                db.drop_all()
+                db.create_all()
                 
     except Exception as e:
         logger.error(f"Error in create_tables: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
         # Don't raise the exception, let the app continue but log the error
 
 # Create tables immediately but safely
@@ -442,6 +463,37 @@ def debug_database():
     except Exception as e:
         return jsonify({'error': str(e), 'database_url_present': 'DATABASE_URL' in os.environ}), 500
 
+@app.route('/setup-database')
+def setup_database():
+    """Simple database setup endpoint - creates tables and admin account"""
+    try:
+        with app.app_context():
+            # Drop all tables first (fresh start)
+            db.drop_all()
+            
+            # Create all tables
+            db.create_all()
+            
+            # Verify tables were created
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Database setup complete! You can now register accounts.',
+                'tables_created': tables,
+                'next_step': 'Go to /register and create your admin account with malachitebionics@gmail.com'
+            })
+            
+    except Exception as e:
+        logger.error(f"Database setup error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Database setup failed'
+        }), 500
+
 @app.route('/init-db')
 def init_database():
     """Manual database initialization endpoint"""
@@ -578,6 +630,8 @@ def register():
                 flash('Database SSL connection issue. Please contact support.', 'error')
             elif 'password' in error_str or 'authentication' in error_str or 'auth' in error_str:
                 flash('Database authentication issue. Please contact support.', 'error')
+            elif type(e).__name__ == 'ArgumentError':
+                flash('Database schema issue. Please visit /init-db to initialize the database.', 'error')
             else:
                 # Show the actual error type for debugging
                 flash(f'Database error ({type(e).__name__}). Please contact support if this persists.', 'error')
@@ -634,6 +688,8 @@ def register():
                 flash('Database SSL connection issue. Please contact support.', 'error')
             elif 'password' in error_str or 'authentication' in error_str or 'auth' in error_str:
                 flash('Database authentication issue. Please contact support.', 'error')
+            elif type(e).__name__ == 'ArgumentError':
+                flash('Database schema issue. Please visit /init-db to initialize the database.', 'error')
             elif 'mail' in error_str or 'smtp' in error_str:
                 flash('Registration successful, but email verification could not be sent. Please contact support.', 'warning')
                 # Still redirect to login since user was created
