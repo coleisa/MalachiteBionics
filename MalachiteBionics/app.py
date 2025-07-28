@@ -334,34 +334,64 @@ def init_database():
             admin_user = User.query.filter_by(email='malachitebionics@gmail.com').first()
             if admin_user:
                 admin_user.is_admin = True
-                admin_user.email_verified = True
-                info.append(f"Made {admin_user.email} an admin user")
+                admin_user.email_verified = True  # Force verify admin
+                admin_user.email_verification_token = None  # Clear any pending verification
+                info.append(f"Made {admin_user.email} an admin user (auto-verified)")
             else:
                 info.append("malachitebionics@gmail.com not found - please register this account first")
             
-            # Also check if any other users need admin status
-            other_admin_emails = ['admin@tradingbot.com']  # Keep existing admin if it exists
-            for email in other_admin_emails:
-                user = User.query.filter_by(email=email).first()
-                if user:
-                    user.is_admin = True
-                    user.email_verified = True
-                    info.append(f"Updated {email} to admin status")
+            # Also make any existing admin accounts verified
+            existing_admins = User.query.filter_by(is_admin=True).all()
+            for admin in existing_admins:
+                admin.email_verified = True
+                admin.email_verification_token = None
+                if admin.email != 'malachitebionics@gmail.com':
+                    info.append(f"Auto-verified admin: {admin.email}")
             
             db.session.commit()
             
             user_count = User.query.count()
             admin_count = User.query.filter_by(is_admin=True).count()
+            verified_count = User.query.filter_by(email_verified=True).count()
             
             return jsonify({
                 'success': True, 
                 'message': 'Database initialized successfully',
                 'total_users': user_count,
                 'admin_users': admin_count,
+                'verified_users': verified_count,
                 'info': info
             })
             
     except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        return jsonify({
+            'success': False, 
+            'error': str(e),
+            'message': 'Database initialization failed - check logs for details'
+        }), 500
+
+@app.route('/make-admin')
+def make_admin():
+    """Emergency route to make malachitebionics@gmail.com admin without email verification"""
+    try:
+        admin_user = User.query.filter_by(email='malachitebionics@gmail.com').first()
+        if admin_user:
+            admin_user.is_admin = True
+            admin_user.email_verified = True
+            admin_user.email_verification_token = None
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'message': f'{admin_user.email} is now admin and verified'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'malachitebionics@gmail.com not found - please register first'
+            })
+    except Exception as e:
+        logger.error(f"Make admin error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/pricing')
@@ -418,14 +448,23 @@ def register():
             user = User(email=email, display_name=display_name)
             user.set_password(password)
             
+            # Special handling for admin email - auto-verify and make admin
+            if email.lower() == 'malachitebionics@gmail.com':
+                user.email_verified = True
+                user.is_admin = True
+                logger.info(f"Auto-verified and granted admin privileges to {email}")
+            
             db.session.add(user)
             db.session.commit()
             
-            # Send verification email
-            if send_verification_email(user):
-                flash('Registration successful! Please check your email and click the verification link before logging in.', 'success')
+            # Send verification email (skip for admin email to avoid issues)
+            if email.lower() == 'malachitebionics@gmail.com':
+                flash('Registration successful! Admin account created and verified.', 'success')
             else:
-                flash('Registration successful, but we could not send the verification email. Please contact support.', 'warning')
+                if send_verification_email(user):
+                    flash('Registration successful! Please check your email and click the verification link before logging in.', 'success')
+                else:
+                    flash('Registration successful, but we could not send the verification email. Please contact support.', 'warning')
             
             return redirect(url_for('login'))
             
