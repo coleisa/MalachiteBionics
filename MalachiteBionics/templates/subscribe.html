@@ -35,7 +35,7 @@
                                     </div>
                                     <div class="col-md-4 text-md-end">
                                         <h4 class="mb-0">
-                                            £{{ '3' if plan_type == 'v3' else '5' if plan_type == 'v6' else '7.99' }}/month
+                                            £{{ '2.99' if plan_type == 'v3' else '4.99' if plan_type == 'v6' else '7.99' }}/month
                                         </h4>
                                     </div>
                                 </div>
@@ -46,10 +46,10 @@
                         <form id="subscription-form">
                             <input type="hidden" name="plan_type" value="{{ plan_type }}">
                             
-                            <div class="mb-5">
+                                <div class="mb-5">
                                 <h4 class="mb-3">Select Cryptocurrencies to Monitor</h4>
                                 <p class="text-muted mb-4">
-                                    Choose which cryptocurrencies you want to receive trading signals for:
+                                    Choose 2 cryptocurrencies you want to receive trading signals for:
                                 </p>
                                 
                                 <div class="coin-selection">
@@ -111,13 +111,7 @@
                                     </div>
                                 </div>
                                 
-                                {% if plan_type == 'v3' %}
-                                    <small class="text-muted">You can select up to 5 cryptocurrencies with the Basic plan.</small>
-                                {% elif plan_type == 'v6' %}
-                                    <small class="text-muted">You can select up to 10 cryptocurrencies with the Classic plan.</small>
-                                {% else %}
-                                    <small class="text-muted">Unlimited cryptocurrencies with the Premium plan.</small>
-                                {% endif %}
+                                <small class="text-muted">You can select up to 2 cryptocurrencies of your choosing.</small>
                             </div>
                             
                             <!-- Terms -->
@@ -187,14 +181,14 @@
             return;
         }
         
-        // Check plan limits
-        const planType = '{{ plan_type }}';
-        if (planType === 'v3' && selectedCoins.length > 5) {
-            alert('Basic plan allows up to 5 cryptocurrencies. Please deselect some coins or upgrade your plan.');
+        // Check plan limits - all plans limited to 2 coins
+        if (selectedCoins.length > 2) {
+            alert('Please select exactly 2 cryptocurrencies to monitor.');
             return;
         }
-        if (planType === 'v6' && selectedCoins.length > 10) {
-            alert('Classic plan allows up to 10 cryptocurrencies. Please deselect some coins or upgrade your plan.');
+        
+        if (selectedCoins.length < 2) {
+            alert('Please select exactly 2 cryptocurrencies to monitor.');
             return;
         }
         
@@ -228,21 +222,14 @@
     
     // Coin selection limit enforcement
     const coinCheckboxes = document.querySelectorAll('input[name="coins"]');
-    const planType = '{{ plan_type }}';
-    const maxCoins = planType === 'v3' ? 5 : planType === 'v6' ? 10 : Infinity;
+    const maxCoins = 2; // All plans limited to 2 coins
     
     coinCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', () => {
             const selected = document.querySelectorAll('input[name="coins"]:checked');
-            if (selected.length >= maxCoins && checkbox.checked) {
-                if (selected.length > maxCoins) {
-                    checkbox.checked = false;
-                    if (planType === 'v3') {
-                        alert('Basic plan allows up to 5 cryptocurrencies.');
-                    } else if (planType === 'v6') {
-                        alert('Classic plan allows up to 10 cryptocurrencies.');
-                    }
-                }
+            if (selected.length > maxCoins && checkbox.checked) {
+                checkbox.checked = false;
+                alert('You can only select up to 2 cryptocurrencies.');
             }
         });
     });
