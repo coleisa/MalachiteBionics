@@ -24,6 +24,13 @@ if database_url and database_url.startswith('postgres://'):
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+    'connect_args': {
+        'options': '-csearch_path=public'
+    } if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else {}
+}
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -45,6 +52,7 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    display_name = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     discord_user_id = db.Column(db.String(50), unique=True)
     discord_server_id = db.Column(db.String(50))
@@ -89,22 +97,25 @@ def create_tables():
     """Create database tables if they don't exist"""
     try:
         with app.app_context():
+            # Only create tables if they don't exist, don't drop existing ones
             db.create_all()
             logger.info("Database tables created/verified successfully")
             
-            # Create admin user if it doesn't exist
+            # Create admin user if it doesn't exist (but don't recreate if exists)
             admin = User.query.filter_by(email='admin@tradingbot.com').first()
             if not admin:
-                admin = User(email='admin@tradingbot.com')
+                admin = User(email='admin@tradingbot.com', display_name='Admin')
                 admin.set_password('admin123')
                 db.session.add(admin)
                 db.session.commit()
                 logger.info("Admin user created")
+            else:
+                logger.info("Admin user already exists")
                 
     except Exception as e:
         logger.error(f"Error creating tables: {e}")
 
-# Call table creation on app start
+# Call table creation on app start (only creates tables if they don't exist)
 create_tables()
 
 # Routes
@@ -118,10 +129,54 @@ def health_check():
     try:
         # Test database connection
         db.session.execute('SELECT 1')
-        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+        
+        # Check if users exist
+        user_count = User.query.count()
+        
+        return jsonify({
+            'status': 'healthy', 
+            'database': 'connected',
+            'users_count': user_count,
+            'database_url_type': 'postgresql' if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite'
+        }), 200
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
+
+@app.route('/debug-db')
+def debug_database():
+    """Debug endpoint to check database state - REMOVE IN PRODUCTION"""
+    try:
+        users = User.query.all()
+        user_list = []
+        for user in users:
+            user_list.append({
+                'id': user.id,
+                'email': user.email,
+                'display_name': user.display_name,
+                'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        
+        subscriptions = Subscription.query.all()
+        sub_list = []
+        for sub in subscriptions:
+            sub_list.append({
+                'id': sub.id,
+                'user_id': sub.user_id,
+                'plan_type': sub.plan_type,
+                'status': sub.status
+            })
+        
+        return jsonify({
+            'database_url': app.config['SQLALCHEMY_DATABASE_URI'][:50] + '...' if len(app.config['SQLALCHEMY_DATABASE_URI']) > 50 else app.config['SQLALCHEMY_DATABASE_URI'],
+            'users': user_list,
+            'subscriptions': sub_list,
+            'total_users': len(user_list),
+            'total_subscriptions': len(sub_list)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/pricing')
 def pricing():
@@ -131,12 +186,13 @@ def pricing():
 def register():
     if request.method == 'POST':
         email = request.form.get('email')
+        display_name = request.form.get('display_name')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         
         # Validation
-        if not email or not password:
-            flash('Email and password are required.', 'error')
+        if not email or not display_name or not password:
+            flash('Email, display name, and password are required.', 'error')
             return render_template('register.html')
         
         if password != confirm_password:
@@ -145,6 +201,10 @@ def register():
         
         if len(password) < 8:
             flash('Password must be at least 8 characters long.', 'error')
+            return render_template('register.html')
+        
+        if len(display_name) < 2:
+            flash('Display name must be at least 2 characters long.', 'error')
             return render_template('register.html')
         
         # Check if user already exists
@@ -160,7 +220,7 @@ def register():
         
         # Create new user
         try:
-            user = User(email=email)
+            user = User(email=email, display_name=display_name)
             user.set_password(password)
             
             db.session.add(user)
@@ -235,7 +295,10 @@ def create_checkout_session():
             return jsonify({'error': 'Invalid plan type'}), 400
         
         if not coins:
-            return jsonify({'error': 'Please select at least one coin'}), 400
+            return jsonify({'error': 'Please select exactly 2 cryptocurrencies'}), 400
+        
+        if len(coins) != 2:
+            return jsonify({'error': 'Please select exactly 2 cryptocurrencies'}), 400
         
         # Define pricing (in pence - GBP)
         prices = {
@@ -267,7 +330,7 @@ def create_checkout_session():
                 'price_data': {
                     'currency': 'gbp',
                     'product_data': {
-                        'name': f'Trading Bot {plan_type.upper()} - {len(coins)} Coins',
+                        'name': f'Trading Bot {plan_type.upper()} - 2 Coins',
                         'description': f'Monthly subscription for {plan_type.upper()} trading algorithm with {", ".join(coins)} monitoring'
                     },
                     'unit_amount': prices[plan_type],
@@ -569,9 +632,7 @@ def internal_error(error):
 
 if __name__ == '__main__':
     try:
-        with app.app_context():
-            db.create_all()
-            logger.info("Database tables created successfully")
+        # Database tables are already created by create_tables() function above
         app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
     except Exception as e:
         logger.error(f"Failed to start application: {e}")
