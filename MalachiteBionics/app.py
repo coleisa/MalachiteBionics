@@ -109,49 +109,18 @@ def create_tables():
     """Create database tables if they don't exist"""
     try:
         with app.app_context():
-            # Check if we can connect to the database
-            try:
-                db.session.execute('SELECT 1')
-                logger.info("Database connection successful")
-            except Exception as conn_error:
-                logger.error(f"Database connection failed: {conn_error}")
-                raise
-            
-            # Create all tables (this won't drop existing data)
+            # Simple table creation without complex checks
             db.create_all()
             logger.info("Database tables created/verified successfully")
-            
-            # Verify tables were created
-            inspector = inspect(db.engine)
-            tables = inspector.get_table_names()
-            logger.info(f"Available tables: {tables}")
-            
-            # Create admin user if it doesn't exist (but don't recreate if exists)
-            try:
-                admin = User.query.filter_by(email='admin@tradingbot.com').first()
-                if not admin:
-                    admin = User(email='admin@tradingbot.com', display_name='Admin')
-                    admin.set_password('admin123')
-                    db.session.add(admin)
-                    db.session.commit()
-                    logger.info("Admin user created")
-                else:
-                    logger.info("Admin user already exists")
-                    
-                # Log total user count
-                user_count = User.query.count()
-                logger.info(f"Total users in database: {user_count}")
-                
-            except Exception as user_error:
-                logger.error(f"Error handling admin user: {user_error}")
-                db.session.rollback()
                 
     except Exception as e:
         logger.error(f"Error in create_tables: {e}")
         # Don't raise the exception, let the app continue but log the error
 
-# Call table creation on app start (only creates tables if they don't exist)
-create_tables()
+# Delayed database initialization - called after first request
+@app.before_first_request
+def initialize_database():
+    create_tables()
 
 # Routes
 @app.route('/')
@@ -182,59 +151,18 @@ def health_check():
 def debug_database():
     """Debug endpoint to check database state - REMOVE IN PRODUCTION"""
     try:
-        # Check database connection
-        db.session.execute('SELECT 1')
+        # Simple database check
+        user_count = User.query.count()
         
-        # Get table information
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-        
-        users = User.query.all()
-        user_list = []
-        for user in users:
-            user_list.append({
-                'id': user.id,
-                'email': user.email,
-                'display_name': user.display_name,
-                'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S')
-            })
-        
-        subscriptions = Subscription.query.all()
-        sub_list = []
-        for sub in subscriptions:
-            sub_list.append({
-                'id': sub.id,
-                'user_id': sub.user_id,
-                'plan_type': sub.plan_type,
-                'status': sub.status
-            })
-        
-        # Mask sensitive parts of database URL
+        # Check database type
         db_url = app.config['SQLALCHEMY_DATABASE_URI']
-        if '@' in db_url:
-            # Hide password in URL
-            parts = db_url.split('@')
-            if '://' in parts[0]:
-                protocol_and_creds = parts[0].split('://')
-                if ':' in protocol_and_creds[1]:
-                    user_pass = protocol_and_creds[1].split(':')
-                    masked_url = f"{protocol_and_creds[0]}://{user_pass[0]}:***@{parts[1]}"
-                else:
-                    masked_url = db_url
-            else:
-                masked_url = db_url
-        else:
-            masked_url = db_url
+        db_type = 'postgresql' if 'postgresql' in db_url else 'sqlite'
         
         return jsonify({
-            'database_url': masked_url,
-            'database_type': 'postgresql' if 'postgresql' in db_url else 'sqlite',
-            'available_tables': tables,
-            'users': user_list,
-            'subscriptions': sub_list,
-            'total_users': len(user_list),
-            'total_subscriptions': len(sub_list),
-            'railway_database_url_env': 'DATABASE_URL' in os.environ
+            'database_type': db_type,
+            'total_users': user_count,
+            'railway_database_url_env': 'DATABASE_URL' in os.environ,
+            'status': 'ok'
         })
         
     except Exception as e:
