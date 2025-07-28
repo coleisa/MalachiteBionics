@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Help & Support - Trading Bot{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                Help & Support
+            </h1>
+            <p class="text-xl text-gray-600">
+                We're here to help you with any questions or issues
+            </p>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Contact Us</h2>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Email Support</h3>
+                    <p class="text-gray-600 mb-2">For any questions, issues, or feedback:</p>
+                    <a href="mailto:{{ business_email }}" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        {{ business_email }}
+                    </a>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Response Time</h3>
+                    <p class="text-gray-600">
+                        We typically respond to emails within <strong>24 hours</strong> during business days.
+                        For urgent issues, please include "URGENT" in your subject line.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
+            
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">How do I verify my email?</h3>
+                    <p class="text-gray-600">
+                        After registering, check your email inbox for a verification link. If you don't see it, 
+                        check your spam folder or 
+                        <a href="{{ url_for('resend_verification') }}" class="text-blue-600 hover:text-blue-800">request a new verification email</a>.
+                    </p>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Can I change my cryptocurrency selection?</h3>
+                    <p class="text-gray-600">
+                        Currently, you can select exactly 2 cryptocurrencies during subscription. 
+                        Contact us if you need to modify your selection.
+                    </p>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">How do I cancel my subscription?</h3>
+                    <p class="text-gray-600">
+                        You can cancel your subscription from your dashboard. Your access will continue 
+                        until the end of your current billing period.
+                    </p>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">What payment methods do you accept?</h3>
+                    <p class="text-gray-600">
+                        We accept all major credit and debit cards through our secure Stripe payment processor.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Issues -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Account Issues</h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Can't Log In?</h3>
+                    <ul class="text-gray-600 space-y-1">
+                        <li>• Make sure your email is verified</li>
+                        <li>• Check your password is correct</li>
+                        <li>• Try resetting your password</li>
+                        <li>• Contact us if issues persist</li>
+                    </ul>
+                </div>
+                
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Email Not Verified?</h3>
+                    <ul class="text-gray-600 space-y-1">
+                        <li>• Check your spam/junk folder</li>
+                        <li>• Request a new verification email</li>
+                        <li>• Make sure you're checking the right email</li>
+                        <li>• Contact us for manual verification</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-6 text-center">
+                <a href="{{ url_for('resend_verification') }}" 
+                   class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    Resend Verification Email
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
