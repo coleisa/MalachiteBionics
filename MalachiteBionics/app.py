@@ -1,12 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from sqlalchemy import inspect
 import stripe
 import os
 import logging
+import secrets
+import uuid
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -22,7 +25,15 @@ logger = logging.getLogger(__name__)
 # Configuration with fallbacks
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-secret-key-for-development')
 
-# Railway database configuration
+# Email configuration
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')  # Your business Gmail
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')  # Your Gmail app password
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
+
+# Railway database configuration with improvements
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
     # Fix Railway PostgreSQL URL format
@@ -39,21 +50,28 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_recycle': 300,
+    'pool_timeout': 20,
+    'pool_size': 10,
+    'max_overflow': 20,
 }
 
 # Add PostgreSQL specific settings if using PostgreSQL
 if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
     app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'] = {
         'options': '-csearch_path=public',
-        'sslmode': 'require'
+        'sslmode': 'require',
+        'connect_timeout': 10,
     }
 
 # Initialize extensions
 db = SQLAlchemy(app)
+mail = Mail(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
+login_manager.session_protection = 'strong'
+login_manager.remember_cookie_duration = timedelta(days=30)
 
 # Configure Stripe
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
@@ -63,9 +81,22 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 # User model
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    # Add UUID for better session tracking
+    uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
     email = db.Column(db.String(120), unique=True, nullable=False)
     display_name = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    
+    # Email verification fields
+    email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    email_verification_token = db.Column(db.String(100), unique=True)
+    email_verification_sent_at = db.Column(db.DateTime)
+    
+    # Session tracking for better persistence
+    last_login = db.Column(db.DateTime)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    login_count = db.Column(db.Integer, default=0)
+    
     discord_user_id = db.Column(db.String(50), unique=True)
     discord_server_id = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -74,11 +105,38 @@ class User(UserMixin, db.Model):
     # Subscription relationship
     subscriptions = db.relationship('Subscription', backref='user', lazy=True)
     
+    def get_id(self):
+        """Override get_id to use UUID for better session persistence"""
+        return self.uuid
+    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def generate_verification_token(self):
+        """Generate email verification token"""
+        self.email_verification_token = secrets.token_urlsafe(32)
+        self.email_verification_sent_at = datetime.utcnow()
+        return self.email_verification_token
+    
+    def verify_email_token(self, token):
+        """Verify email verification token"""
+        if self.email_verification_token == token:
+            # Check if token is not too old (24 hours)
+            if self.email_verification_sent_at and \
+               datetime.utcnow() - self.email_verification_sent_at < timedelta(hours=24):
+                self.email_verified = True
+                self.email_verification_token = None
+                self.email_verification_sent_at = None
+                return True
+        return False
+    
+    def update_last_seen(self):
+        """Update last seen timestamp"""
+        self.last_seen = datetime.utcnow()
+        db.session.commit()
     
     def get_active_subscription(self):
         return Subscription.query.filter_by(
@@ -101,8 +159,16 @@ class Subscription(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 @login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+def load_user(user_uuid):
+    """Load user by UUID instead of ID for better session persistence"""
+    try:
+        user = User.query.filter_by(uuid=user_uuid).first()
+        if user:
+            user.update_last_seen()
+        return user
+    except Exception as e:
+        logger.error(f"Error loading user {user_uuid}: {e}")
+        return None
 
 # Initialize database tables
 def create_tables():
@@ -122,6 +188,40 @@ try:
     create_tables()
 except Exception as e:
     logger.error(f"Initial table creation failed: {e}")
+
+# Email functions
+def send_verification_email(user):
+    """Send email verification email"""
+    try:
+        token = user.generate_verification_token()
+        db.session.commit()
+        
+        verification_url = url_for('verify_email', token=token, _external=True)
+        
+        msg = Message(
+            'Verify Your Email - Trading Bot',
+            recipients=[user.email]
+        )
+        
+        msg.html = f"""
+        <h2>Welcome to Trading Bot!</h2>
+        <p>Hi {user.display_name},</p>
+        <p>Thank you for signing up! Please verify your email address by clicking the link below:</p>
+        <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p>{verification_url}</p>
+        <p>This link will expire in 24 hours.</p>
+        <br>
+        <p>Best regards,<br>Trading Bot Team</p>
+        """
+        
+        mail.send(msg)
+        logger.info(f"Verification email sent to {user.email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send verification email to {user.email}: {e}")
+        return False
 
 # Routes
 @app.route('/')
@@ -153,16 +253,37 @@ def debug_database():
     """Debug endpoint to check database state - REMOVE IN PRODUCTION"""
     try:
         # Simple database check
-        user_count = User.query.count()
+        total_users = User.query.count()
+        verified_users = User.query.filter_by(email_verified=True).count()
+        unverified_users = total_users - verified_users
         
         # Check database type
         db_url = app.config['SQLALCHEMY_DATABASE_URI']
         db_type = 'postgresql' if 'postgresql' in db_url else 'sqlite'
         
+        # Get sample user data (first 5 users for debugging)
+        sample_users = User.query.limit(5).all()
+        user_samples = []
+        for user in sample_users:
+            user_samples.append({
+                'id': user.id,
+                'uuid': user.uuid,
+                'email': user.email,
+                'display_name': user.display_name,
+                'email_verified': user.email_verified,
+                'last_login': user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else 'Never',
+                'login_count': user.login_count,
+                'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        
         return jsonify({
             'database_type': db_type,
-            'total_users': user_count,
+            'total_users': total_users,
+            'verified_users': verified_users,
+            'unverified_users': unverified_users,
             'railway_database_url_env': 'DATABASE_URL' in os.environ,
+            'mail_configured': bool(app.config.get('MAIL_USERNAME')),
+            'sample_users': user_samples,
             'status': 'ok'
         })
         
@@ -200,6 +321,12 @@ def init_database():
 def pricing():
     return render_template('pricing.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
 
+@app.route('/help')
+def help_page():
+    """Help page with contact information"""
+    business_email = app.config['MAIL_USERNAME'] or 'support@tradingbot.com'
+    return render_template('help.html', business_email=business_email)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -229,7 +356,10 @@ def register():
         try:
             existing_user = User.query.filter_by(email=email).first()
             if existing_user:
-                flash('Email already registered. Please log in.', 'error')
+                if existing_user.email_verified:
+                    flash('Email already registered. Please log in.', 'error')
+                else:
+                    flash('Email already registered but not verified. Please check your email or request a new verification.', 'warning')
                 return render_template('register.html')
         except Exception as e:
             logger.error(f"Database query error during registration: {e}")
@@ -243,8 +373,15 @@ def register():
             
             db.session.add(user)
             db.session.commit()
-            flash('Registration successful! Please log in.', 'success')
+            
+            # Send verification email
+            if send_verification_email(user):
+                flash('Registration successful! Please check your email and click the verification link before logging in.', 'success')
+            else:
+                flash('Registration successful, but we could not send the verification email. Please contact support.', 'warning')
+            
             return redirect(url_for('login'))
+            
         except Exception as e:
             db.session.rollback()
             logger.error(f"Registration error: {e}")
@@ -266,11 +403,23 @@ def login():
         user = User.query.filter_by(email=email).first()
         
         if user and user.check_password(password):
-            login_user(user, remember=True)
+            if not user.email_verified:
+                flash('Please verify your email before logging in. Check your inbox for the verification link.', 'warning')
+                return render_template('login.html')
+            
+            # Update login tracking
+            user.last_login = datetime.utcnow()
+            user.login_count += 1
+            user.update_last_seen()
+            
+            login_user(user, remember=True, duration=timedelta(days=30))
+            logger.info(f"User {user.email} logged in successfully")
+            
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('dashboard'))
         else:
             flash('Invalid email or password.', 'error')
+            logger.warning(f"Failed login attempt for email: {email}")
     
     return render_template('login.html')
 
@@ -280,6 +429,59 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
+
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    """Email verification endpoint"""
+    user = User.query.filter_by(email_verification_token=token).first()
+    
+    if not user:
+        flash('Invalid or expired verification link.', 'error')
+        return redirect(url_for('login'))
+    
+    if user.verify_email_token(token):
+        db.session.commit()
+        flash('Email verified successfully! You can now log in.', 'success')
+        logger.info(f"Email verified for user: {user.email}")
+    else:
+        flash('Invalid or expired verification link.', 'error')
+    
+    return redirect(url_for('login'))
+
+@app.route('/resend-verification', methods=['GET', 'POST'])
+def resend_verification():
+    """Resend email verification"""
+    if request.method == 'POST':
+        email = request.form.get('email')
+        
+        if not email:
+            flash('Email is required.', 'error')
+            return render_template('resend_verification.html')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            flash('No account found with that email address.', 'error')
+            return render_template('resend_verification.html')
+        
+        if user.email_verified:
+            flash('Email is already verified. You can log in.', 'info')
+            return redirect(url_for('login'))
+        
+        # Check if we recently sent a verification email (rate limiting)
+        if user.email_verification_sent_at and \
+           datetime.utcnow() - user.email_verification_sent_at < timedelta(minutes=5):
+            flash('Verification email was sent recently. Please wait 5 minutes before requesting another.', 'warning')
+            return render_template('resend_verification.html')
+        
+        if send_verification_email(user):
+            flash('Verification email sent! Please check your inbox.', 'success')
+        else:
+            flash('Failed to send verification email. Please try again later.', 'error')
+        
+        return render_template('resend_verification.html')
+    
+    return render_template('resend_verification.html')
 
 @app.route('/dashboard')
 @login_required
