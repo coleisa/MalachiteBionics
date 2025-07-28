@@ -4,7 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 import stripe
 import os
 import logging
@@ -182,7 +182,7 @@ def create_tables():
             # Force database creation and handle ArgumentError
             try:
                 # Test if we can connect to the database
-                db.session.execute('SELECT 1')
+                db.session.execute(text('SELECT 1'))
             except Exception as conn_error:
                 logger.error(f"Database connection failed during table creation: {conn_error}")
                 # If connection fails, try to create the database schema
@@ -366,7 +366,7 @@ def health_check():
     """Health check endpoint for Railway"""
     try:
         # Test database connection
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         # Check if users exist
         user_count = User.query.count()
@@ -386,7 +386,7 @@ def test_database():
     """Simple database test endpoint"""
     try:
         # Test basic database connection
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         # Test table existence
         from sqlalchemy import inspect
@@ -606,7 +606,7 @@ def register():
         # Check if user already exists
         try:
             # Test database connection first
-            db.session.execute('SELECT 1')
+            db.session.execute(text('SELECT 1'))
             
             existing_user = User.query.filter_by(email=email).first()
             if existing_user:
@@ -640,7 +640,7 @@ def register():
         # Create new user
         try:
             # Test database connection again before creating user
-            db.session.execute('SELECT 1')
+            db.session.execute(text('SELECT 1'))
             
             user = User(email=email, display_name=display_name)
             user.set_password(password)
