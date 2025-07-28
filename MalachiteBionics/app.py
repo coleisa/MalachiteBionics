@@ -794,6 +794,38 @@ def change_email():
     
     return redirect(url_for('settings'))
 
+@app.route('/settings/change-display-name', methods=['POST'])
+@login_required
+def change_display_name():
+    """Change user's display name"""
+    new_display_name = request.form.get('new_display_name')
+    
+    # Validation
+    if not new_display_name:
+        flash('Display name is required.', 'error')
+        return redirect(url_for('settings'))
+    
+    if len(new_display_name) < 2:
+        flash('Display name must be at least 2 characters long.', 'error')
+        return redirect(url_for('settings'))
+    
+    if len(new_display_name) > 50:
+        flash('Display name must be less than 50 characters.', 'error')
+        return redirect(url_for('settings'))
+    
+    try:
+        # Update display name
+        current_user.display_name = new_display_name.strip()
+        db.session.commit()
+        flash('Display name updated successfully!', 'success')
+        logger.info(f"Display name changed for user {current_user.email} to {new_display_name}")
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while updating your display name.', 'error')
+        logger.error(f"Display name change error: {e}")
+    
+    return redirect(url_for('settings'))
+
 @app.route('/settings/delete-account', methods=['POST'])
 @login_required
 def delete_account():
