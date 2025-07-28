@@ -360,6 +360,46 @@ def health_check():
         logger.error(f"Health check failed: {e}")
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
 
+@app.route('/test-db')
+def test_database():
+    """Simple database test endpoint"""
+    try:
+        # Test basic database connection
+        db.session.execute('SELECT 1')
+        
+        # Test table existence
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        # Test user table structure
+        user_columns = []
+        if 'user' in tables:
+            user_columns = [col['name'] for col in inspector.get_columns('user')]
+        
+        # Test creating a simple query
+        user_count = User.query.count()
+        
+        return jsonify({
+            'status': 'Database working',
+            'connection': 'OK',
+            'tables': tables,
+            'user_table_exists': 'user' in tables,
+            'user_columns': user_columns,
+            'user_count': user_count,
+            'database_type': 'postgresql' if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite',
+            'has_database_url': 'DATABASE_URL' in os.environ
+        })
+        
+    except Exception as e:
+        logger.error(f"Database test failed: {e}")
+        return jsonify({
+            'status': 'Database error',
+            'error': str(e),
+            'database_type': 'postgresql' if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite',
+            'has_database_url': 'DATABASE_URL' in os.environ
+        }), 500
+
 @app.route('/debug-db')
 def debug_database():
     """Debug endpoint to check database state - REMOVE IN PRODUCTION"""
@@ -513,6 +553,9 @@ def register():
         
         # Check if user already exists
         try:
+            # Test database connection first
+            db.session.execute('SELECT 1')
+            
             existing_user = User.query.filter_by(email=email).first()
             if existing_user:
                 if existing_user.email_verified:
@@ -521,13 +564,21 @@ def register():
                     flash('Email already registered but not verified. Please check your email or request a new verification.', 'warning')
                 return render_template('register.html')
         except Exception as e:
-            logger.error(f"Database query error during registration check: {e}")
-            # Don't show the actual error to users for security
-            flash('Service temporarily unavailable. Please try again in a moment.', 'error')
+            logger.error(f"Database connection error during registration check: {e}")
+            # Provide more helpful error message based on the error type
+            if 'connection' in str(e).lower() or 'timeout' in str(e).lower():
+                flash('Database connection issue. Please try again in a few moments.', 'error')
+            elif 'table' in str(e).lower() or 'column' in str(e).lower():
+                flash('Database configuration issue. Please contact support.', 'error')
+            else:
+                flash('Registration temporarily unavailable. Please try again later.', 'error')
             return render_template('register.html')
         
         # Create new user
         try:
+            # Test database connection again before creating user
+            db.session.execute('SELECT 1')
+            
             user = User(email=email, display_name=display_name)
             user.set_password(password)
             
@@ -559,11 +610,21 @@ def register():
         except Exception as e:
             db.session.rollback()
             logger.error(f"Registration error for {email}: {e}")
-            # Provide more specific error messages
-            if 'UNIQUE constraint failed' in str(e) or 'duplicate key' in str(e):
+            
+            # Provide more specific error messages based on error type
+            error_str = str(e).lower()
+            if 'unique constraint' in error_str or 'duplicate key' in error_str:
                 flash('This email address is already registered. Please try logging in instead.', 'error')
+            elif 'connection' in error_str or 'timeout' in error_str:
+                flash('Database connection issue. Please try again in a few moments.', 'error')
+            elif 'table' in error_str or 'column' in error_str:
+                flash('Database configuration issue. Please contact support if this persists.', 'error')
+            elif 'mail' in error_str or 'smtp' in error_str:
+                flash('Registration successful, but email verification could not be sent. Please contact support.', 'warning')
+                # Still redirect to login since user was created
+                return redirect(url_for('login'))
             else:
-                flash('Registration failed due to a technical issue. Please try again later.', 'error')
+                flash('Registration failed due to a technical issue. Please try again in a few moments.', 'error')
             return render_template('register.html')
     
     return render_template('register.html')
