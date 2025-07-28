@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}User Details - {{ user.display_name }} - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{{ url_for('admin_dashboard') }}" class="text-decoration-none">
+                                    <i class="fas fa-shield-alt me-1"></i>Admin Dashboard
+                                </a>
+                            </li>
+                            <li class="breadcrumb-item active">User Details</li>
+                        </ol>
+                    </nav>
+                    <h1 class="display-6 fw-bold mb-2">{{ user.display_name }}</h1>
+                    <p class="text-muted">User ID: {{ user.id }} | UUID: {{ user.uuid }}</p>
+                </div>
+                <div class="text-end">
+                    {% if user.is_admin %}
+                        <span class="badge bg-warning text-dark px-3 py-2 me-2">
+                            <i class="fas fa-crown me-1"></i>Administrator
+                        </span>
+                    {% endif %}
+                    {% if user.is_active %}
+                        <span class="badge bg-success px-3 py-2">Active User</span>
+                    {% else %}
+                        <span class="badge bg-danger px-3 py-2">Inactive User</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- User Information -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-user me-2"></i>User Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="avatar-circle mx-auto mb-3" style="width: 80px; height: 80px; font-size: 24px;">
+                            {{ user.display_name[0].upper() }}
+                        </div>
+                        <h4 class="fw-bold">{{ user.display_name }}</h4>
+                        <p class="text-muted">{{ user.email }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted small">Email Status:</label>
+                        <div>
+                            {% if user.email_verified %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>Verified
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Unverified
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted small">Account Created:</label>
+                        <div>{{ user.created_at.strftime('%B %d, %Y at %I:%M %p') }}</div>
+                    </div>
+
+                    {% if user.last_login %}
+                    <div class="mb-3">
+                        <label class="text-muted small">Last Login:</label>
+                        <div>{{ user.last_login.strftime('%B %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if user.last_seen %}
+                    <div class="mb-3">
+                        <label class="text-muted small">Last Seen:</label>
+                        <div>{{ user.last_seen.strftime('%B %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="text-muted small">Total Logins:</label>
+                        <div>{{ user.login_count or 0 }}</div>
+                    </div>
+
+                    {% if user.discord_user_id %}
+                    <div class="mb-3">
+                        <label class="text-muted small">Discord User ID:</label>
+                        <div><code>{{ user.discord_user_id }}</code></div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscription Management -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-cogs me-2"></i>Subscription Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_update_user_subscription', user_id=user.id) }}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Algorithm Plan</label>
+                                {% set active_sub = user.subscriptions|selectattr("status", "equalto", "active")|first %}
+                                <select name="plan_type" class="form-select" required>
+                                    <option value="">Select Plan</option>
+                                    <option value="v3" {% if active_sub and active_sub.plan_type == 'v3' %}selected{% endif %}>
+                                        Basic Algorithm (v3) - £2.99/month
+                                    </option>
+                                    <option value="v6" {% if active_sub and active_sub.plan_type == 'v6' %}selected{% endif %}>
+                                        Classic Algorithm (v6) - £4.99/month
+                                    </option>
+                                    <option value="v9" {% if active_sub and active_sub.plan_type == 'v9' %}selected{% endif %}>
+                                        Premium Algorithm (v9) - £7.99/month
+                                    </option>
+                                    <option value="elite" {% if active_sub and active_sub.plan_type == 'elite' %}selected{% endif %}>
+                                        Elite Algorithm (v12) - Coming Soon
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Cryptocurrency Pairs</label>
+                                {% if active_sub and active_sub.coins %}
+                                    {% set current_coins = active_sub.coins|from_json %}
+                                {% else %}
+                                    {% set current_coins = [] %}
+                                {% endif %}
+                                <select name="coins" class="form-select" multiple size="4">
+                                    <option value="BTC" {% if 'BTC' in current_coins %}selected{% endif %}>Bitcoin (BTC)</option>
+                                    <option value="ETH" {% if 'ETH' in current_coins %}selected{% endif %}>Ethereum (ETH)</option>
+                                    <option value="SOL" {% if 'SOL' in current_coins %}selected{% endif %}>Solana (SOL)</option>
+                                    <option value="ADA" {% if 'ADA' in current_coins %}selected{% endif %}>Cardano (ADA)</option>
+                                    <option value="DOT" {% if 'DOT' in current_coins %}selected{% endif %}>Polkadot (DOT)</option>
+                                    <option value="LINK" {% if 'LINK' in current_coins %}selected{% endif %}>Chainlink (LINK)</option>
+                                    <option value="MATIC" {% if 'MATIC' in current_coins %}selected{% endif %}>Polygon (MATIC)</option>
+                                    <option value="AVAX" {% if 'AVAX' in current_coins %}selected{% endif %}>Avalanche (AVAX)</option>
+                                </select>
+                                <div class="form-text">Hold Ctrl/Cmd to select multiple coins</div>
+                            </div>
+
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Update Subscription
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Current Subscription Status -->
+            {% if subscriptions %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-history me-2"></i>Subscription History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Plan</th>
+                                    <th>Status</th>
+                                    <th>Coins</th>
+                                    <th>Created</th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subscription in subscriptions %}
+                                <tr>
+                                    <td>
+                                        {% if subscription.plan_type == 'v3' %}Basic
+                                        {% elif subscription.plan_type == 'v6' %}Classic
+                                        {% elif subscription.plan_type == 'v9' %}Premium
+                                        {% elif subscription.plan_type == 'elite' %}Elite
+                                        {% else %}{{ subscription.plan_type }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if subscription.status == 'active' %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ subscription.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if subscription.coins %}
+                                            {% set coin_list = subscription.coins|from_json %}
+                                            {{ coin_list|join(', ') }}
+                                        {% else %}
+                                            <span class="text-muted">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ subscription.created_at.strftime('%b %d, %Y') }}</td>
+                                    <td>{{ subscription.updated_at.strftime('%b %d, %Y') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Admin Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-danger text-white py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Admin Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">Account Status</h6>
+                            <form method="POST" action="{{ url_for('admin_toggle_user_status', user_id=user.id) }}" class="d-inline">
+                                {% if user.is_active %}
+                                    <button type="submit" class="btn btn-warning btn-sm" 
+                                            onclick="return confirm('Are you sure you want to deactivate this user?')">
+                                        <i class="fas fa-user-slash me-1"></i>Deactivate User
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-user-check me-1"></i>Activate User
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">Admin Privileges</h6>
+                            {% if user.id != current_user.id %}
+                            <form method="POST" action="{{ url_for('admin_toggle_admin_status', user_id=user.id) }}" class="d-inline">
+                                {% if user.is_admin %}
+                                    <button type="submit" class="btn btn-warning btn-sm" 
+                                            onclick="return confirm('Are you sure you want to remove admin privileges?')">
+                                        <i class="fas fa-user-minus me-1"></i>Remove Admin
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-info btn-sm" 
+                                            onclick="return confirm('Are you sure you want to grant admin privileges?')">
+                                        <i class="fas fa-user-plus me-1"></i>Make Admin
+                                    </button>
+                                {% endif %}
+                            </form>
+                            {% else %}
+                            <span class="text-muted small">Cannot modify your own admin status</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-12">
+                            <hr>
+                            <h6 class="fw-semibold text-danger">Danger Zone</h6>
+                            {% if user.id != current_user.id %}
+                            <form method="POST" action="{{ url_for('admin_delete_user', user_id=user.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm" 
+                                        onclick="return confirm('Are you sure you want to permanently delete this user? This action cannot be undone!')">
+                                    <i class="fas fa-trash me-1"></i>Delete User Permanently
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small">Cannot delete your own account</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+</style>
+{% endblock %}

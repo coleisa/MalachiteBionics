@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - User Management{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Admin Header -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h1 class="display-5 fw-bold mb-2">
+                        <i class="fas fa-shield-alt text-warning me-3"></i>Admin Dashboard
+                    </h1>
+                    <p class="lead text-muted">Comprehensive user and subscription management</p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-warning text-dark px-3 py-2">
+                        <i class="fas fa-crown me-2"></i>Administrator Access
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-5">
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 60px; height: 60px; background: linear-gradient(135deg, #3b82f6, #6366f1); border-radius: 15px;">
+                        <i class="fas fa-users fa-lg text-white"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">{{ stats.total_users }}</h3>
+                    <p class="text-muted mb-0">Total Users</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 60px; height: 60px; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 15px;">
+                        <i class="fas fa-user-check fa-lg text-white"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">{{ stats.active_users }}</h3>
+                    <p class="text-muted mb-0">Active Users</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 60px; height: 60px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 15px;">
+                        <i class="fas fa-credit-card fa-lg text-white"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">{{ stats.active_subscriptions }}</h3>
+                    <p class="text-muted mb-0">Active Subscriptions</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 60px; height: 60px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 15px;">
+                        <i class="fas fa-chart-line fa-lg text-white"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">{{ stats.recent_users }}</h3>
+                    <p class="text-muted mb-0">New This Month</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Stats Row -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-envelope-check fa-2x text-success"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1">{{ stats.verified_users }}</h4>
+                            <p class="text-muted mb-0">Verified Emails</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-shield-alt fa-2x text-warning"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1">{{ stats.admin_users }}</h4>
+                            <p class="text-muted mb-0">Admin Users</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-history fa-2x text-info"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1">{{ stats.total_subscriptions }}</h4>
+                            <p class="text-muted mb-0">Total Subscriptions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h4 class="mb-0 fw-bold">User Management</h4>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="px-4 py-3">User</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3">Subscription</th>
+                                    <th class="px-4 py-3">Joined</th>
+                                    <th class="px-4 py-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td class="px-4 py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-3">
+                                                {{ user.display_name[0].upper() }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-semibold">{{ user.display_name }}</div>
+                                                <div class="text-muted small">{{ user.email }}</div>
+                                                {% if user.is_admin %}
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-crown me-1"></i>Admin
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="d-flex flex-column">
+                                            {% if user.is_active %}
+                                                <span class="badge bg-success mb-1">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger mb-1">Inactive</span>
+                                            {% endif %}
+                                            {% if user.email_verified %}
+                                                <span class="badge bg-info">Verified</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">Unverified</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        {% set active_sub = user.subscriptions|selectattr("status", "equalto", "active")|first %}
+                                        {% if active_sub %}
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-semibold text-success">
+                                                    {% if active_sub.plan_type == 'v3' %}Basic
+                                                    {% elif active_sub.plan_type == 'v6' %}Classic
+                                                    {% elif active_sub.plan_type == 'v9' %}Premium
+                                                    {% elif active_sub.plan_type == 'elite' %}Elite
+                                                    {% else %}{{ active_sub.plan_type }}
+                                                    {% endif %}
+                                                </span>
+                                                {% if active_sub.coins %}
+                                                    {% set coin_list = active_sub.coins|from_json %}
+                                                    <small class="text-muted">{{ coin_list|length }} coins</small>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">No subscription</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="text-muted small">
+                                            {{ user.created_at.strftime('%b %d, %Y') }}
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+</style>
+{% endblock %}
