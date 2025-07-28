@@ -11,7 +11,6 @@ import logging
 import secrets
 import json
 import uuid
-import uuid
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -228,6 +227,89 @@ def send_verification_email(user):
         logger.error(f"Failed to send verification email to {user.email}: {e}")
         return False
 
+def send_welcome_email(user):
+    """Send welcome email after user verifies their account"""
+    try:
+        # Skip welcome email for admin account
+        if user.email.lower() == 'malachitebionics@gmail.com':
+            logger.info(f"Skipping welcome email for admin account: {user.email}")
+            return True
+        
+        msg = Message(
+            'Welcome to MalachiteBionics - Your Trading Journey Begins!',
+            recipients=[user.email]
+        )
+        
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+            <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #000; font-size: 28px; margin-bottom: 10px;">🎉 Welcome to MalachiteBionics!</h1>
+                    <p style="color: #666; font-size: 16px; margin: 0;">Your professional crypto trading journey starts now</p>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 10px; padding: 20px; margin-bottom: 25px;">
+                    <h2 style="color: #000; font-size: 20px; margin-bottom: 15px;">Hi {user.display_name}!</h2>
+                    <p style="color: #555; line-height: 1.6; margin-bottom: 15px;">
+                        Congratulations on joining thousands of successful traders who trust MalachiteBionics for professional cryptocurrency trading signals!
+                    </p>
+                    <p style="color: #555; line-height: 1.6; margin: 0;">
+                        Your email has been verified and your account is ready to use. 🚀
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #000; font-size: 18px; margin-bottom: 15px;">🎯 What's Next?</h3>
+                    <div style="background: white; border-left: 4px solid #22c55e; padding: 15px; margin-bottom: 15px;">
+                        <h4 style="color: #22c55e; font-size: 16px; margin-bottom: 8px;">1. Choose Your Algorithm</h4>
+                        <p style="color: #666; margin: 0; font-size: 14px;">Select from Basic, Classic, Premium, or our upcoming Elite algorithm</p>
+                    </div>
+                    <div style="background: white; border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 15px;">
+                        <h4 style="color: #3b82f6; font-size: 16px; margin-bottom: 8px;">2. Pick Your Cryptocurrencies</h4>
+                        <p style="color: #666; margin: 0; font-size: 14px;">Choose 2 cryptocurrency pairs for monitoring and signals</p>
+                    </div>
+                    <div style="background: white; border-left: 4px solid #8b5cf6; padding: 15px;">
+                        <h4 style="color: #8b5cf6; font-size: 16px; margin-bottom: 8px;">3. Start Trading</h4>
+                        <p style="color: #666; margin: 0; font-size: 14px;">Receive real-time signals via Discord and maximize your profits</p>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <a href="{url_for('pricing', _external=True)}" style="background: linear-gradient(135deg, #000, #333); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+                        🚀 Choose Your Plan
+                    </a>
+                </div>
+                
+                <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #000; font-size: 16px; margin-bottom: 10px;">📊 Our Track Record</h3>
+                    <ul style="color: #666; padding-left: 20px; margin: 0;">
+                        <li>85%+ accuracy on trading signals</li>
+                        <li>24/7 automated market monitoring</li>
+                        <li>Real-time Discord integration</li>
+                        <li>Professional risk management</li>
+                    </ul>
+                </div>
+                
+                <div style="text-align: center; border-top: 1px solid #e9ecef; padding-top: 20px;">
+                    <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Need help getting started?</p>
+                    <a href="{url_for('help_page', _external=True)}" style="color: #3b82f6; text-decoration: none;">Visit our Help Center</a>
+                    <p style="color: #999; font-size: 12px; margin-top: 15px;">
+                        Best regards,<br>
+                        The MalachiteBionics Team
+                    </p>
+                </div>
+            </div>
+        </div>
+        """
+        
+        mail.send(msg)
+        logger.info(f"Welcome email sent to {user.email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send welcome email to {user.email}: {e}")
+        return False
+
 # Admin decorator and utilities
 from functools import wraps
 
@@ -439,8 +521,9 @@ def register():
                     flash('Email already registered but not verified. Please check your email or request a new verification.', 'warning')
                 return render_template('register.html')
         except Exception as e:
-            logger.error(f"Database query error during registration: {e}")
-            flash('Database error. Please try again.', 'error')
+            logger.error(f"Database query error during registration check: {e}")
+            # Don't show the actual error to users for security
+            flash('Service temporarily unavailable. Please try again in a moment.', 'error')
             return render_template('register.html')
         
         # Create new user
@@ -455,13 +538,18 @@ def register():
                 logger.info(f"Auto-verified and granted admin privileges to {email}")
             
             db.session.add(user)
-            db.session.commit()
+            db.session.flush()  # Get the user ID without committing yet
             
             # Send verification email (skip for admin email to avoid issues)
             if email.lower() == 'malachitebionics@gmail.com':
+                db.session.commit()
                 flash('Registration successful! Admin account created and verified.', 'success')
             else:
-                if send_verification_email(user):
+                # Try to send verification email before committing
+                email_sent = send_verification_email(user)
+                db.session.commit()
+                
+                if email_sent:
                     flash('Registration successful! Please check your email and click the verification link before logging in.', 'success')
                 else:
                     flash('Registration successful, but we could not send the verification email. Please contact support.', 'warning')
@@ -470,8 +558,12 @@ def register():
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Registration error: {e}")
-            flash('Registration failed. Please try again later.', 'error')
+            logger.error(f"Registration error for {email}: {e}")
+            # Provide more specific error messages
+            if 'UNIQUE constraint failed' in str(e) or 'duplicate key' in str(e):
+                flash('This email address is already registered. Please try logging in instead.', 'error')
+            else:
+                flash('Registration failed due to a technical issue. Please try again later.', 'error')
             return render_template('register.html')
     
     return render_template('register.html')
@@ -527,7 +619,18 @@ def verify_email(token):
     
     if user.verify_email_token(token):
         db.session.commit()
-        flash('Email verified successfully! You can now log in.', 'success')
+        
+        # Send welcome email after successful verification (except for admin)
+        welcome_sent = send_welcome_email(user)
+        
+        if user.email.lower() == 'malachitebionics@gmail.com':
+            flash('Email verified successfully! Admin account is ready.', 'success')
+        else:
+            if welcome_sent:
+                flash('Email verified successfully! Check your inbox for a welcome message with next steps.', 'success')
+            else:
+                flash('Email verified successfully! You can now log in and start trading.', 'success')
+        
         logger.info(f"Email verified for user: {user.email}")
     else:
         flash('Invalid or expired verification link.', 'error')
@@ -1136,6 +1239,28 @@ def admin_delete_user(user_id):
         logger.error(f"Admin delete user error: {e}")
         flash('Error deleting user.', 'error')
         return redirect(url_for('admin_user_detail', user_id=user_id))
+
+@app.route('/admin/user/<int:user_id>/send-welcome', methods=['POST'])
+@admin_required
+def admin_send_welcome_email(user_id):
+    """Send welcome email to a user (admin only)"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        if not user.email_verified:
+            flash('Cannot send welcome email to unverified user.', 'error')
+            return redirect(url_for('admin_user_detail', user_id=user_id))
+        
+        if send_welcome_email(user):
+            flash(f'Welcome email sent to {user.email}.', 'success')
+        else:
+            flash(f'Failed to send welcome email to {user.email}.', 'error')
+        
+    except Exception as e:
+        logger.error(f"Admin send welcome email error: {e}")
+        flash('Error sending welcome email.', 'error')
+    
+    return redirect(url_for('admin_user_detail', user_id=user_id))
 
 # Error handlers
 @app.errorhandler(404)
