@@ -565,13 +565,22 @@ def register():
                 return render_template('register.html')
         except Exception as e:
             logger.error(f"Database connection error during registration check: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Full error details: {repr(e)}")
+            
             # Provide more helpful error message based on the error type
-            if 'connection' in str(e).lower() or 'timeout' in str(e).lower():
+            error_str = str(e).lower()
+            if 'connection' in error_str or 'timeout' in error_str or 'connect' in error_str:
                 flash('Database connection issue. Please try again in a few moments.', 'error')
-            elif 'table' in str(e).lower() or 'column' in str(e).lower():
-                flash('Database configuration issue. Please contact support.', 'error')
+            elif 'table' in error_str or 'column' in error_str or 'relation' in error_str:
+                flash('Database needs initialization. Please contact support.', 'error')
+            elif 'ssl' in error_str or 'certificate' in error_str:
+                flash('Database SSL connection issue. Please contact support.', 'error')
+            elif 'password' in error_str or 'authentication' in error_str or 'auth' in error_str:
+                flash('Database authentication issue. Please contact support.', 'error')
             else:
-                flash('Registration temporarily unavailable. Please try again later.', 'error')
+                # Show the actual error type for debugging
+                flash(f'Database error ({type(e).__name__}). Please contact support if this persists.', 'error')
             return render_template('register.html')
         
         # Create new user
@@ -610,21 +619,28 @@ def register():
         except Exception as e:
             db.session.rollback()
             logger.error(f"Registration error for {email}: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Full error details: {repr(e)}")
             
             # Provide more specific error messages based on error type
             error_str = str(e).lower()
             if 'unique constraint' in error_str or 'duplicate key' in error_str:
                 flash('This email address is already registered. Please try logging in instead.', 'error')
-            elif 'connection' in error_str or 'timeout' in error_str:
+            elif 'connection' in error_str or 'timeout' in error_str or 'connect' in error_str:
                 flash('Database connection issue. Please try again in a few moments.', 'error')
-            elif 'table' in error_str or 'column' in error_str:
-                flash('Database configuration issue. Please contact support if this persists.', 'error')
+            elif 'table' in error_str or 'column' in error_str or 'relation' in error_str:
+                flash('Database needs initialization. Please contact support.', 'error')
+            elif 'ssl' in error_str or 'certificate' in error_str:
+                flash('Database SSL connection issue. Please contact support.', 'error')
+            elif 'password' in error_str or 'authentication' in error_str or 'auth' in error_str:
+                flash('Database authentication issue. Please contact support.', 'error')
             elif 'mail' in error_str or 'smtp' in error_str:
                 flash('Registration successful, but email verification could not be sent. Please contact support.', 'warning')
                 # Still redirect to login since user was created
                 return redirect(url_for('login'))
             else:
-                flash('Registration failed due to a technical issue. Please try again in a few moments.', 'error')
+                # Show the actual error type for debugging
+                flash(f'Registration failed ({type(e).__name__}). Please contact support if this persists.', 'error')
             return render_template('register.html')
     
     return render_template('register.html')
