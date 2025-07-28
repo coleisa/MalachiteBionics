@@ -198,8 +198,8 @@ def create_checkout_session():
         
         # Define pricing (in pence - GBP)
         prices = {
-            'v3': 300,   # £3.00
-            'v6': 500,   # £5.00
+            'v3': 299,   # £2.99
+            'v6': 499,   # £4.99
             'v9': 799    # £7.99
         }
         
@@ -400,6 +400,121 @@ def cancel_subscription():
         flash('Error cancelling subscription. Please contact support.', 'error')
     
     return redirect(url_for('dashboard'))
+
+# Settings routes
+@app.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html')
+
+@app.route('/settings/change-password', methods=['POST'])
+@login_required
+def change_password():
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    # Verify current password
+    if not check_password_hash(current_user.password_hash, current_password):
+        flash('Current password is incorrect.', 'error')
+        return redirect(url_for('settings'))
+    
+    # Check if new passwords match
+    if new_password != confirm_password:
+        flash('New passwords do not match.', 'error')
+        return redirect(url_for('settings'))
+    
+    # Validate new password length
+    if len(new_password) < 6:
+        flash('Password must be at least 6 characters long.', 'error')
+        return redirect(url_for('settings'))
+    
+    try:
+        # Update password
+        current_user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        flash('Password updated successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while updating your password.', 'error')
+        logger.error(f"Password change error: {e}")
+    
+    return redirect(url_for('settings'))
+
+@app.route('/settings/change-email', methods=['POST'])
+@login_required
+def change_email():
+    password_for_email = request.form.get('password_for_email')
+    new_email = request.form.get('new_email')
+    
+    # Verify password
+    if not check_password_hash(current_user.password_hash, password_for_email):
+        flash('Password is incorrect.', 'error')
+        return redirect(url_for('settings'))
+    
+    # Check if email is already in use
+    existing_user = User.query.filter_by(email=new_email).first()
+    if existing_user and existing_user.id != current_user.id:
+        flash('This email address is already in use.', 'error')
+        return redirect(url_for('settings'))
+    
+    try:
+        # Update email
+        current_user.email = new_email
+        db.session.commit()
+        flash('Email address updated successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while updating your email address.', 'error')
+        logger.error(f"Email change error: {e}")
+    
+    return redirect(url_for('settings'))
+
+@app.route('/settings/delete-account', methods=['POST'])
+@login_required
+def delete_account():
+    password_for_deletion = request.form.get('password_for_deletion')
+    confirm_deletion = request.form.get('confirm_deletion')
+    
+    # Verify password
+    if not check_password_hash(current_user.password_hash, password_for_deletion):
+        flash('Password is incorrect.', 'error')
+        return redirect(url_for('settings'))
+    
+    # Check confirmation checkbox
+    if not confirm_deletion:
+        flash('You must confirm that you understand this action is permanent.', 'error')
+        return redirect(url_for('settings'))
+    
+    try:
+        user_id = current_user.id
+        
+        # Cancel any active subscriptions first
+        active_subscription = current_user.get_active_subscription()
+        if active_subscription and active_subscription.stripe_subscription_id:
+            try:
+                stripe.Subscription.delete(active_subscription.stripe_subscription_id)
+            except Exception as stripe_error:
+                logger.error(f"Error cancelling Stripe subscription: {stripe_error}")
+        
+        # Delete all user subscriptions
+        Subscription.query.filter_by(user_id=user_id).delete()
+        
+        # Delete the user
+        db.session.delete(current_user)
+        db.session.commit()
+        
+        # Log out the user
+        logout_user()
+        
+        flash('Your account has been successfully deleted.', 'success')
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while deleting your account. Please try again.', 'error')
+        logger.error(f"Account deletion error: {e}")
+        return redirect(url_for('settings'))
 
 # Error handlers
 @app.errorhandler(404)
