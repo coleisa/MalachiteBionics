@@ -1,4 +1,4 @@
-rom flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
@@ -330,29 +330,23 @@ def init_database():
             
             info = []
             
-            # Ensure admin user exists and is admin
-            admin = User.query.filter_by(email='admin@tradingbot.com').first()
-            if not admin:
-                admin = User(
-                    email='admin@tradingbot.com', 
-                    display_name='Admin',
-                    is_admin=True,
-                    email_verified=True
-                )
-                admin.set_password('admin123')
-                db.session.add(admin)
-                info.append("Created admin@tradingbot.com (password: admin123)")
+            # Make malachitebionics@gmail.com the admin user
+            admin_user = User.query.filter_by(email='malachitebionics@gmail.com').first()
+            if admin_user:
+                admin_user.is_admin = True
+                admin_user.email_verified = True
+                info.append(f"Made {admin_user.email} an admin user")
             else:
-                admin.is_admin = True
-                admin.email_verified = True
-                info.append("Updated admin@tradingbot.com to admin status")
+                info.append("malachitebionics@gmail.com not found - please register this account first")
             
-            # Make the first user (if exists) an admin too
-            first_user = User.query.filter(User.email != 'admin@tradingbot.com').first()
-            if first_user:
-                first_user.is_admin = True
-                first_user.email_verified = True
-                info.append(f"Made {first_user.email} an admin user")
+            # Also check if any other users need admin status
+            other_admin_emails = ['admin@tradingbot.com']  # Keep existing admin if it exists
+            for email in other_admin_emails:
+                user = User.query.filter_by(email=email).first()
+                if user:
+                    user.is_admin = True
+                    user.email_verified = True
+                    info.append(f"Updated {email} to admin status")
             
             db.session.commit()
             
