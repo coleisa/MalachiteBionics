@@ -32,14 +32,14 @@ login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Configure Stripe
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # User model
 class User(UserMixin, db.Model):
@@ -84,10 +84,44 @@ class Subscription(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Initialize database tables
+def create_tables():
+    """Create database tables if they don't exist"""
+    try:
+        with app.app_context():
+            db.create_all()
+            logger.info("Database tables created/verified successfully")
+            
+            # Create admin user if it doesn't exist
+            admin = User.query.filter_by(email='admin@tradingbot.com').first()
+            if not admin:
+                admin = User(email='admin@tradingbot.com')
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                logger.info("Admin user created")
+                
+    except Exception as e:
+        logger.error(f"Error creating tables: {e}")
+
+# Call table creation on app start
+create_tables()
+
 # Routes
 @app.route('/')
 def index():
     return render_template('index.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Railway"""
+    try:
+        # Test database connection
+        db.session.execute('SELECT 1')
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
 
 @app.route('/pricing')
 def pricing():
@@ -114,15 +148,21 @@ def register():
             return render_template('register.html')
         
         # Check if user already exists
-        if User.query.filter_by(email=email).first():
-            flash('Email already registered. Please log in.', 'error')
+        try:
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                flash('Email already registered. Please log in.', 'error')
+                return render_template('register.html')
+        except Exception as e:
+            logger.error(f"Database query error during registration: {e}")
+            flash('Database error. Please try again.', 'error')
             return render_template('register.html')
         
         # Create new user
-        user = User(email=email)
-        user.set_password(password)
-        
         try:
+            user = User(email=email)
+            user.set_password(password)
+            
             db.session.add(user)
             db.session.commit()
             flash('Registration successful! Please log in.', 'success')
@@ -130,7 +170,8 @@ def register():
         except Exception as e:
             db.session.rollback()
             logger.error(f"Registration error: {e}")
-            flash('Registration failed. Please try again.', 'error')
+            flash('Registration failed. Please try again later.', 'error')
+            return render_template('register.html')
     
     return render_template('register.html')
 
