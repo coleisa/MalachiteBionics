@@ -117,10 +117,11 @@ def create_tables():
         logger.error(f"Error in create_tables: {e}")
         # Don't raise the exception, let the app continue but log the error
 
-# Delayed database initialization - called after first request
-@app.before_first_request
-def initialize_database():
+# Create tables immediately but safely
+try:
     create_tables()
+except Exception as e:
+    logger.error(f"Initial table creation failed: {e}")
 
 # Routes
 @app.route('/')
@@ -196,8 +197,6 @@ def init_database():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/pricing')
-def pricing():
-    return render_template('pricing.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
 def pricing():
     return render_template('pricing.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
 
