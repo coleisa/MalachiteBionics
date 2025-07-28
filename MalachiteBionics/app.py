@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
+from sqlalchemy import inspect
 import stripe
 import os
 import logging
@@ -14,23 +15,38 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 
+# Configure logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Configuration with fallbacks
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-secret-key-for-development')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///trading_bot.db')
 
-# Fix for Railway PostgreSQL URLs
-database_url = app.config['SQLALCHEMY_DATABASE_URI']
-if database_url and database_url.startswith('postgres://'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://', 1)
+# Railway database configuration
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Fix Railway PostgreSQL URL format
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    logger.info(f"Using Railway PostgreSQL database")
+else:
+    # Fallback to SQLite for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///trading_bot.db'
+    logger.info("Using local SQLite database")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_recycle': 300,
-    'connect_args': {
-        'options': '-csearch_path=public'
-    } if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else {}
 }
+
+# Add PostgreSQL specific settings if using PostgreSQL
+if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'] = {
+        'options': '-csearch_path=public',
+        'sslmode': 'require'
+    }
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -38,10 +54,6 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Configure Stripe
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
@@ -97,23 +109,46 @@ def create_tables():
     """Create database tables if they don't exist"""
     try:
         with app.app_context():
-            # Only create tables if they don't exist, don't drop existing ones
+            # Check if we can connect to the database
+            try:
+                db.session.execute('SELECT 1')
+                logger.info("Database connection successful")
+            except Exception as conn_error:
+                logger.error(f"Database connection failed: {conn_error}")
+                raise
+            
+            # Create all tables (this won't drop existing data)
             db.create_all()
             logger.info("Database tables created/verified successfully")
             
+            # Verify tables were created
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            logger.info(f"Available tables: {tables}")
+            
             # Create admin user if it doesn't exist (but don't recreate if exists)
-            admin = User.query.filter_by(email='admin@tradingbot.com').first()
-            if not admin:
-                admin = User(email='admin@tradingbot.com', display_name='Admin')
-                admin.set_password('admin123')
-                db.session.add(admin)
-                db.session.commit()
-                logger.info("Admin user created")
-            else:
-                logger.info("Admin user already exists")
+            try:
+                admin = User.query.filter_by(email='admin@tradingbot.com').first()
+                if not admin:
+                    admin = User(email='admin@tradingbot.com', display_name='Admin')
+                    admin.set_password('admin123')
+                    db.session.add(admin)
+                    db.session.commit()
+                    logger.info("Admin user created")
+                else:
+                    logger.info("Admin user already exists")
+                    
+                # Log total user count
+                user_count = User.query.count()
+                logger.info(f"Total users in database: {user_count}")
+                
+            except Exception as user_error:
+                logger.error(f"Error handling admin user: {user_error}")
+                db.session.rollback()
                 
     except Exception as e:
-        logger.error(f"Error creating tables: {e}")
+        logger.error(f"Error in create_tables: {e}")
+        # Don't raise the exception, let the app continue but log the error
 
 # Call table creation on app start (only creates tables if they don't exist)
 create_tables()
@@ -147,6 +182,13 @@ def health_check():
 def debug_database():
     """Debug endpoint to check database state - REMOVE IN PRODUCTION"""
     try:
+        # Check database connection
+        db.session.execute('SELECT 1')
+        
+        # Get table information
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
         users = User.query.all()
         user_list = []
         for user in users:
@@ -167,18 +209,67 @@ def debug_database():
                 'status': sub.status
             })
         
+        # Mask sensitive parts of database URL
+        db_url = app.config['SQLALCHEMY_DATABASE_URI']
+        if '@' in db_url:
+            # Hide password in URL
+            parts = db_url.split('@')
+            if '://' in parts[0]:
+                protocol_and_creds = parts[0].split('://')
+                if ':' in protocol_and_creds[1]:
+                    user_pass = protocol_and_creds[1].split(':')
+                    masked_url = f"{protocol_and_creds[0]}://{user_pass[0]}:***@{parts[1]}"
+                else:
+                    masked_url = db_url
+            else:
+                masked_url = db_url
+        else:
+            masked_url = db_url
+        
         return jsonify({
-            'database_url': app.config['SQLALCHEMY_DATABASE_URI'][:50] + '...' if len(app.config['SQLALCHEMY_DATABASE_URI']) > 50 else app.config['SQLALCHEMY_DATABASE_URI'],
+            'database_url': masked_url,
+            'database_type': 'postgresql' if 'postgresql' in db_url else 'sqlite',
+            'available_tables': tables,
             'users': user_list,
             'subscriptions': sub_list,
             'total_users': len(user_list),
-            'total_subscriptions': len(sub_list)
+            'total_subscriptions': len(sub_list),
+            'railway_database_url_env': 'DATABASE_URL' in os.environ
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'database_url_present': 'DATABASE_URL' in os.environ}), 500
+
+@app.route('/init-db')
+def init_database():
+    """Manual database initialization endpoint"""
+    try:
+        with app.app_context():
+            # Force recreate tables
+            db.create_all()
+            
+            # Ensure admin user exists
+            admin = User.query.filter_by(email='admin@tradingbot.com').first()
+            if not admin:
+                admin = User(email='admin@tradingbot.com', display_name='Admin')
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+            
+            user_count = User.query.count()
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Database initialized successfully',
+                'total_users': user_count
+            })
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/pricing')
+def pricing():
+    return render_template('pricing.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
 def pricing():
     return render_template('pricing.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
 
