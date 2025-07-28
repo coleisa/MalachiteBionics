@@ -3,118 +3,216 @@
 {% block title %}Help & Support - Trading Bot{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="text-center mb-12">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Help & Support
-            </h1>
-            <p class="text-xl text-gray-600">
-                We're here to help you with any questions or issues
-            </p>
+<div class="hero-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h1 class="display-4 fw-bold mb-4">Help & Support</h1>
+                <p class="lead mb-5">We're here to help you succeed with your trading journey</p>
+            </div>
         </div>
+    </div>
+</div>
 
-        <!-- Contact Information -->
-        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Contact Us</h2>
-            
-            <div class="grid md:grid-cols-2 gap-8">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Email Support</h3>
-                    <p class="text-gray-600 mb-2">For any questions, issues, or feedback:</p>
-                    <a href="mailto:{{ business_email }}" 
-                       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                        </svg>
+<div class="container py-5">
+    <!-- Contact Section -->
+    <div class="row mb-5">
+        <div class="col-lg-6 mb-4">
+            <div class="feature-card h-100">
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 rounded-circle mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-envelope fa-2x text-primary"></i>
+                    </div>
+                    <h3 class="fw-bold">Email Support</h3>
+                </div>
+                <p class="text-muted mb-4">Get personalized help from our trading experts. We respond to all inquiries within 24 hours.</p>
+                <div class="text-center">
+                    <a href="mailto:{{ business_email }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-paper-plane me-2"></i>
                         {{ business_email }}
                     </a>
                 </div>
-                
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Response Time</h3>
-                    <p class="text-gray-600">
-                        We typically respond to emails within <strong>24 hours</strong> during business days.
-                        For urgent issues, please include "URGENT" in your subject line.
-                    </p>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="feature-card h-100">
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 rounded-circle mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-clock fa-2x text-success"></i>
+                    </div>
+                    <h3 class="fw-bold">Quick Response</h3>
+                </div>
+                <p class="text-muted mb-4">We pride ourselves on fast, helpful responses. Most questions are answered within a few hours.</p>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded">
+                            <strong class="d-block text-success">< 2 hours</strong>
+                            <small class="text-muted">Average Response</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded">
+                            <strong class="d-block text-primary">24/7</strong>
+                            <small class="text-muted">Email Support</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">Frequently Asked Questions</h2>
+                <p class="lead text-muted">Quick answers to common questions</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 rounded-circle" style="width: 40px; height: 40px;">
+                                <i class="fas fa-envelope-open text-info"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="fw-bold mb-2">Email Verification Issues?</h5>
+                            <p class="text-muted mb-3">Can't find your verification email or need a new one?</p>
+                            <a href="{{ url_for('resend_verification') }}" class="btn btn-outline-info btn-sm">
+                                Resend Verification
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- FAQ Section -->
-        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
-            
-            <div class="space-y-6">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">How do I verify my email?</h3>
-                    <p class="text-gray-600">
-                        After registering, check your email inbox for a verification link. If you don't see it, 
-                        check your spam folder or 
-                        <a href="{{ url_for('resend_verification') }}" class="text-blue-600 hover:text-blue-800">request a new verification email</a>.
-                    </p>
-                </div>
-                
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Can I change my cryptocurrency selection?</h3>
-                    <p class="text-gray-600">
-                        Currently, you can select exactly 2 cryptocurrencies during subscription. 
-                        Contact us if you need to modify your selection.
-                    </p>
-                </div>
-                
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">How do I cancel my subscription?</h3>
-                    <p class="text-gray-600">
-                        You can cancel your subscription from your dashboard. Your access will continue 
-                        until the end of your current billing period.
-                    </p>
-                </div>
-                
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">What payment methods do you accept?</h3>
-                    <p class="text-gray-600">
-                        We accept all major credit and debit cards through our secure Stripe payment processor.
-                    </p>
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 rounded-circle" style="width: 40px; height: 40px;">
+                                <i class="fas fa-coins text-warning"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="fw-bold mb-2">Cryptocurrency Selection</h5>
+                            <p class="text-muted mb-3">You can select exactly 2 cryptocurrencies for monitoring during subscription.</p>
+                            <a href="{{ url_for('pricing') }}" class="btn btn-outline-warning btn-sm">
+                                View Plans
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Account Issues -->
-        <div class="bg-white rounded-lg shadow-lg p-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Account Issues</h2>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="p-4 border border-gray-200 rounded-lg">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Can't Log In?</h3>
-                    <ul class="text-gray-600 space-y-1">
-                        <li>• Make sure your email is verified</li>
-                        <li>• Check your password is correct</li>
-                        <li>• Try resetting your password</li>
-                        <li>• Contact us if issues persist</li>
-                    </ul>
-                </div>
-                
-                <div class="p-4 border border-gray-200 rounded-lg">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Email Not Verified?</h3>
-                    <ul class="text-gray-600 space-y-1">
-                        <li>• Check your spam/junk folder</li>
-                        <li>• Request a new verification email</li>
-                        <li>• Make sure you're checking the right email</li>
-                        <li>• Contact us for manual verification</li>
-                    </ul>
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 rounded-circle" style="width: 40px; height: 40px;">
+                                <i class="fas fa-times-circle text-danger"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="fw-bold mb-2">Cancel Subscription</h5>
+                            <p class="text-muted mb-3">Cancel anytime from your dashboard. Access continues until billing period ends.</p>
+                            {% if current_user.is_authenticated %}
+                                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-danger btn-sm">
+                                    Go to Dashboard
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('login') }}" class="btn btn-outline-danger btn-sm">
+                                    Login to Cancel
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="mt-6 text-center">
-                <a href="{{ url_for('resend_verification') }}" 
-                   class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                    </svg>
-                    Resend Verification Email
-                </a>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 rounded-circle" style="width: 40px; height: 40px;">
+                                <i class="fas fa-credit-card text-success"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="fw-bold mb-2">Payment Methods</h5>
+                            <p class="text-muted mb-3">We accept all major credit and debit cards through secure Stripe processing.</p>
+                            <span class="badge bg-success">Secure & Encrypted</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Troubleshooting Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="feature-card">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold">Account Troubleshooting</h3>
+                    <p class="text-muted">Common solutions for account-related issues</p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="p-4 bg-light rounded">
+                            <h5 class="fw-bold text-danger mb-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Can't Log In?
+                            </h5>
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Verify your email address first</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Check password is correct</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Try clearing browser cache</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Contact us if issues persist</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="p-4 bg-light rounded">
+                            <h5 class="fw-bold text-warning mb-3">
+                                <i class="fas fa-envelope-circle-check me-2"></i>
+                                Email Not Verified?
+                            </h5>
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Check spam/junk folder</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Request new verification email</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Ensure correct email address</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Contact us for manual verification</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('resend_verification') }}" class="btn btn-outline-primary me-3">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Resend Verification
+                    </a>
+                    <a href="mailto:{{ business_email }}" class="btn btn-primary">
+                        <i class="fas fa-headset me-2"></i>
+                        Contact Support
+                    </a>
+                </div>
             </div>
         </div>
     </div>
