@@ -258,6 +258,51 @@
             letter-spacing: 0.025em;
             box-shadow: var(--shadow-lg);
         }
+
+        /* Elite Card Styling */
+        .pricing-card.elite-card {
+            background: linear-gradient(135deg, #fff9e6, #fffbf0);
+            border: 2px solid #fbbf24;
+            box-shadow: 0 15px 40px rgba(251, 191, 36, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pricing-card.elite-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 49%, rgba(251, 191, 36, 0.1) 50%, transparent 51%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .pricing-card.elite-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .pricing-card.elite-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 60px rgba(251, 191, 36, 0.25);
+        }
+
+        .pricing-card.elite-card .badge {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+            }
+            to {
+                box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+            }
+        }
         
         .pricing-card .mini-bio {
             opacity: 0.7;
