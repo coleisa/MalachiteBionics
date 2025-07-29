@@ -83,7 +83,7 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # Add UUID for better session tracking
-    uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
+    uuid = db.Column(db.String(36), unique=True, nullable=True, default=None)
     email = db.Column(db.String(120), unique=True, nullable=False)
     display_name = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -114,9 +114,18 @@ class User(UserMixin, db.Model):
     # Subscription relationship
     subscriptions = db.relationship('Subscription', backref='user', lazy=True)
     
+    def __init__(self, **kwargs):
+        super(User, self).__init__(**kwargs)
+        # Generate UUID if not provided
+        if not self.uuid:
+            self.uuid = str(uuid.uuid4())
+    
     def get_id(self):
         """Override get_id to use UUID for better session persistence"""
-        return self.uuid
+        # Use UUID if available, otherwise fall back to regular ID
+        if hasattr(self, 'uuid') and self.uuid:
+            return self.uuid
+        return str(self.id)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -219,18 +228,19 @@ class TradingAlert(db.Model):
 def load_user(user_uuid):
     """Load user by UUID instead of ID for better session persistence"""
     try:
+        # First try by UUID (new method)
         user = User.query.filter_by(uuid=user_uuid).first()
         if user:
-            # Only update last_seen if the field exists and we can safely commit
-            try:
-                if hasattr(user, 'last_seen'):
-                    user.last_seen = datetime.utcnow()
-                    db.session.commit()
-            except Exception as commit_error:
-                logger.error(f"Failed to update last_seen for user {user_uuid}: {commit_error}")
-                db.session.rollback()
-                # Don't fail the login, just log the error
-        return user
+            return user
+        
+        # Fallback: try by ID in case UUID doesn't exist yet
+        try:
+            user_id = int(user_uuid)
+            return User.query.get(user_id)
+        except (ValueError, TypeError):
+            pass
+            
+        return None
     except Exception as e:
         logger.error(f"Error loading user {user_uuid}: {e}")
         return None
@@ -772,40 +782,28 @@ def login():
             flash('Email and password are required.', 'error')
             return render_template('login.html')
         
-        user = User.query.filter_by(email=email).first()
-        
-        if user and user.check_password(password):
-            if not user.email_verified:
-                flash('Please verify your email before logging in. Check your inbox for the verification link.', 'warning')
-                return render_template('login.html')
+        try:
+            user = User.query.filter_by(email=email).first()
             
-            # Update login tracking (simplified to avoid database issues)
-            try:
-                user.last_login = datetime.utcnow()
-                if hasattr(user, 'login_count') and user.login_count is not None:
-                    user.login_count += 1
-                else:
-                    user.login_count = 1
-                    
-                # Only update last_seen if the field exists
-                if hasattr(user, 'last_seen'):
-                    user.last_seen = datetime.utcnow()
+            if user and user.check_password(password):
+                # Check email verification (skip for admin to avoid issues)
+                if not user.is_admin and hasattr(user, 'email_verified') and not user.email_verified:
+                    flash('Please verify your email before logging in. Check your inbox for the verification link.', 'warning')
+                    return render_template('login.html')
                 
-                db.session.commit()
-                logger.info(f"Updated login tracking for user {user.email}")
-            except Exception as db_error:
-                logger.error(f"Database error during login tracking: {db_error}")
-                db.session.rollback()
-                # Continue with login even if tracking fails
-            
-            login_user(user, remember=True, duration=timedelta(days=30))
-            logger.info(f"User {user.email} logged in successfully")
-            
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
-        else:
-            flash('Invalid email or password.', 'error')
-            logger.warning(f"Failed login attempt for email: {email}")
+                # Simple login without complex tracking for now
+                login_user(user, remember=True, duration=timedelta(days=30))
+                logger.info(f"User {user.email} logged in successfully")
+                
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+            else:
+                flash('Invalid email or password.', 'error')
+                logger.warning(f"Failed login attempt for email: {email}")
+                
+        except Exception as e:
+            logger.error(f"Login error: {e}")
+            flash('Login failed due to a system error. Please try again.', 'error')
     
     return render_template('login.html')
 
