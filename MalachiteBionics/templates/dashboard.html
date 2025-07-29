@@ -381,25 +381,12 @@
                             </p>
                         </div>
 
-                        <!-- Debug Panel for troubleshooting -->
-                        <div class="mt-3 p-3 bg-warning bg-opacity-10 rounded" id="debug-panel" style="display: none;">
+                        <!-- Alternative Browser Instructions -->
+                        <div class="mt-3 p-3 bg-info bg-opacity-10 rounded" id="browser-instructions" style="display: none;">
                             <h6 class="fw-semibold mb-2">
-                                <i class="fas fa-bug me-1"></i>Debug Information
+                                <i class="fas fa-mobile-alt me-1"></i>Switch to a Compatible Browser
                             </h6>
-                            <div class="small" id="debug-info">
-                                <!-- Debug info will be populated by JavaScript -->
-                            </div>
-                            <button class="btn btn-sm btn-outline-warning mt-2" onclick="copyDebugInfo()">
-                                <i class="fas fa-copy me-1"></i>Copy Debug Info
-                            </button>
-                        </div>
-
-                        <!-- Universal Browser Instructions -->
-                        <div class="mt-3 p-3 bg-info bg-opacity-10 rounded" id="iphone-instructions" style="display: none;">
-                            <h6 class="fw-semibold mb-2">
-                                <i class="fas fa-mobile-alt me-1"></i>Switch to Full Browser
-                            </h6>
-                            <p class="small mb-2">For instant trading notifications, open this site in a full browser:</p>
+                            <p class="small mb-2">For instant trading notifications, please use one of these browsers:</p>
                             <div class="row g-2 mb-3">
                                 <div class="col-4">
                                     <button class="btn btn-sm btn-outline-primary w-100" onclick="openInBrowser('safari')">
@@ -413,13 +400,13 @@
                                 </div>
                                 <div class="col-4">
                                     <button class="btn btn-sm btn-outline-warning w-100" onclick="copyWebsiteUrl()">
-                                        <i class="fas fa-copy me-1"></i>Copy
+                                        <i class="fas fa-copy me-1"></i>Copy URL
                                     </button>
                                 </div>
                             </div>
                             <p class="small text-success mb-0">
                                 <i class="fas fa-bell me-1"></i>
-                                <strong>Recommended:</strong> Get alerts instantly instead of checking manually.
+                                <strong>Benefit:</strong> Get alerts instantly instead of checking manually.
                             </p>
                         </div>
 
@@ -658,8 +645,6 @@ let pushManager = null;
 
 // Initialize notifications when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🔄 Initializing push notifications...');
-    
     try {
         // Comprehensive browser and device detection
     const userAgent = navigator.userAgent;
@@ -740,21 +725,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return true; // Assume supported for other browsers
     }
     
-    console.log('🔍 Browser detection complete:', {
-        userAgent,
-        device: { isMobile, isTablet, isDesktop },
-        browser: { isChrome, isEdge, isFirefox, isSafari, isOpera },
-        inAppBrowser: { isGoogleApp, isFacebookApp, isInstagramApp, isLinkedInApp, isTwitterApp, isDiscordApp, isWhatsAppApp, isTelegramApp },
-        os: { isIOS, isAndroid, isWindows, isMacOS, isLinux },
-        features: { hasServiceWorker, hasPushManager, hasNotifications, isHTTPS },
-        browserVersion
-    });
-    
-    // Show debug panel for troubleshooting
-    const debugPanel = document.getElementById('debug-panel');
-    const debugInfo = document.getElementById('debug-info');
-    
-    // Populate comprehensive debug information
+    // Determine browser and device information for user guidance
+    // Determine browser and device information for user guidance
     let deviceType = isDesktop ? 'Desktop' : isTablet ? 'Tablet' : 'Mobile';
     let browserName = 'Unknown';
     if (isInAppBrowser) {
@@ -772,13 +744,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (isFirefox) browserName = 'Firefox';
     else if (isSafari) browserName = 'Safari';
     else if (isOpera) browserName = 'Opera';
-    
-    let osName = 'Unknown';
-    if (isIOS) osName = 'iOS';
-    else if (isAndroid) osName = 'Android';
-    else if (isWindows) osName = 'Windows';
-    else if (isMacOS) osName = 'macOS';
-    else if (isLinux) osName = 'Linux';
     
     // Comprehensive compatibility assessment and user guidance
     function getCompatibilityStatus() {
@@ -948,25 +913,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const compatibility = getCompatibilityStatus();
-    console.log('✅ Compatibility check result:', compatibility);
-    
-    // Populate comprehensive debug information
-    debugInfo.innerHTML = `
-        <div><strong>Device:</strong> ${deviceType} (${osName})</div>
-        <div><strong>Browser:</strong> ${browserName} ${browserVersion ? `v${browserVersion.string}` : ''}</div>
-        <div><strong>Version Supported:</strong> ${isVersionSupported() ? 'Yes' : 'No'}</div>
-        <div><strong>In-App Browser:</strong> ${isInAppBrowser ? 'Yes (Limited Features)' : 'No'}</div>
-        <div><strong>HTTPS:</strong> ${isHTTPS ? 'Yes' : 'No'}</div>
-        <div><strong>Service Worker:</strong> ${hasServiceWorker ? 'Supported' : 'Not Supported'}</div>
-        <div><strong>Push Manager:</strong> ${hasPushManager ? 'Available' : 'Not Available'}</div>
-        <div><strong>Notifications:</strong> ${hasNotifications ? 'Supported' : 'Not Supported'}</div>
-        <div><strong>Permission:</strong> ${hasNotifications ? Notification.permission : 'N/A'}</div>
-        <div><strong>Overall Compatible:</strong> ${compatibility.compatible ? 'Yes' : 'No'}</div>
-        <div class="mt-2"><strong>User Agent:</strong><br><small>${userAgent}</small></div>
-    `;
     
     // Update UI based on compatibility
-    console.log('🎯 Updating UI based on compatibility:', compatibility.compatible);
     if (compatibility.compatible) {
         // Everything is compatible, proceed with normal flow
         try {
@@ -996,17 +944,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     updateNotificationUI();
                 } catch (swError) {
-                    console.error('Service Worker registration failed:', swError);
-                    document.getElementById('notification-status').textContent = 'Service worker registration failed - contact support';
+                    document.getElementById('notification-status').textContent = 'Service registration failed - try refreshing the page';
                     document.getElementById('notification-status').className = 'status-error';
-                    document.getElementById('debug-panel').style.display = 'block';
                 }
             } else {
                 document.getElementById('notification-status').textContent = 'Server configuration error - contact support';
                 document.getElementById('notification-status').className = 'status-error';
             }
         } catch (error) {
-            console.error('Failed to initialize notifications:', error);
             document.getElementById('notification-status').textContent = 'Connection error - check your internet connection';
             document.getElementById('notification-status').className = 'status-error';
         }
@@ -1014,15 +959,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Handle incompatibility with helpful guidance
         document.getElementById('notification-status').textContent = compatibility.message;
         document.getElementById('notification-status').className = 'status-error';
-        document.getElementById('debug-panel').style.display = 'block';
         
         // Show appropriate instruction panels
-        if (compatibility.showInstructions && (isInAppBrowser || (!isIOS && !isAndroid))) {
-            document.getElementById('iphone-instructions').style.display = 'block';
-        }
-        
-        if (compatibility.showSafariInstructions && isSafari && isIOS) {
-            document.getElementById('safari-instructions').style.display = 'block';
+        if (compatibility.showInstructions || compatibility.showSafariInstructions) {
+            if (compatibility.showSafariInstructions && isSafari && isIOS) {
+                document.getElementById('safari-instructions').style.display = 'block';
+            } else {
+                document.getElementById('browser-instructions').style.display = 'block';
+            }
         }
         
         // Create solution panel
@@ -1053,16 +997,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         `;
         
-        // Insert after the debug panel
-        const debugPanel = document.getElementById('debug-panel');
-        debugPanel.parentNode.insertBefore(solutionPanel, debugPanel.nextSibling);
+        // Insert after the notification controls
+        const notificationControls = document.getElementById('notification-controls');
+        notificationControls.parentNode.insertBefore(solutionPanel, notificationControls.nextSibling);
     }
     
     } catch (initError) {
-        console.error('❌ Initialization failed:', initError);
-        document.getElementById('notification-status').textContent = 'Initialization failed - check console for details';
+        document.getElementById('notification-status').textContent = 'Initialization failed - please refresh the page';
         document.getElementById('notification-status').className = 'status-error';
-        document.getElementById('debug-panel').style.display = 'block';
     }
 });
 
@@ -1178,36 +1120,6 @@ function showAlert(message, type) {
     alertDiv.textContent = message;
     document.body.appendChild(alertDiv);
     setTimeout(() => alertDiv.remove(), 4000);
-}
-
-function copyDebugInfo() {
-    const debugText = document.getElementById('debug-info').innerText;
-    const fullDebug = `Push Notification Debug Report:
-${debugText}
-
-Current Status: ${document.getElementById('notification-status').textContent}
-Timestamp: ${new Date().toISOString()}`;
-    
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(fullDebug).then(() => {
-            showAlert('Debug info copied to clipboard!', 'success');
-        }).catch(() => {
-            showAlert('Could not copy to clipboard', 'error');
-        });
-    } else {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = fullDebug;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            showAlert('Debug info copied to clipboard!', 'success');
-        } catch (err) {
-            showAlert('Could not copy to clipboard', 'error');
-        }
-        document.body.removeChild(textArea);
-    }
 }
 
 function openInBrowser(browserType) {
