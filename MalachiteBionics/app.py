@@ -1541,7 +1541,7 @@ def admin_alerts():
 @app.route('/admin/alerts/create', methods=['GET', 'POST'])
 @admin_required
 def admin_create_alert():
-    """Create a new trading alert"""
+    """Create a new trading alert for individual user based on their subscription"""
     if request.method == 'POST':
         try:
             user_id = request.form.get('user_id')
@@ -1549,22 +1549,45 @@ def admin_create_alert():
             alert_type = request.form.get('alert_type')
             price = float(request.form.get('price', 0))
             confidence = int(request.form.get('confidence', 85))
-            algorithm = request.form.get('algorithm')
             message = request.form.get('message')
             expires_hours = int(request.form.get('expires_hours', 24))
             
             # Validation
-            if not all([user_id, coin_pair, alert_type, algorithm, message]):
+            if not all([user_id, coin_pair, alert_type, message]):
                 flash('All fields are required.', 'error')
-                return render_template('admin/create_alert.html')
+                return render_template('admin/create_alert.html', users=get_users_with_subscriptions())
             
             if alert_type not in ['buy', 'sell', 'hold']:
                 flash('Invalid alert type.', 'error')
-                return render_template('admin/create_alert.html')
+                return render_template('admin/create_alert.html', users=get_users_with_subscriptions())
+            
+            # Get user and validate subscription
+            user = User.query.get(user_id)
+            if not user:
+                flash('User not found.', 'error')
+                return render_template('admin/create_alert.html', users=get_users_with_subscriptions())
+            
+            subscription = user.get_active_subscription()
+            if not subscription:
+                flash(f'User {user.email} does not have an active subscription.', 'error')
+                return render_template('admin/create_alert.html', users=get_users_with_subscriptions())
+            
+            # Validate coin selection against user's subscription
+            try:
+                user_coins = json.loads(subscription.coins) if subscription.coins else []
+            except (json.JSONDecodeError, TypeError):
+                user_coins = []
+            
+            if coin_pair not in user_coins:
+                flash(f'Selected coin {coin_pair} is not in {user.email}\'s subscription. They only have: {", ".join(user_coins)}', 'error')
+                return render_template('admin/create_alert.html', users=get_users_with_subscriptions())
+            
+            # Use the user's plan algorithm
+            algorithm = subscription.plan_type
             
             # Create alert
             alert = TradingAlert(
-                user_id=user_id,
+                user_id=user.id,
                 coin_pair=coin_pair.upper(),
                 alert_type=alert_type,
                 price=price,
@@ -1577,17 +1600,49 @@ def admin_create_alert():
             db.session.add(alert)
             db.session.commit()
             
-            flash(f'Alert created successfully for {coin_pair}!', 'success')
+            flash(f'Alert created successfully for {user.email}: {coin_pair} ({alert_type.upper()}) using {algorithm.upper()} algorithm!', 'success')
             return redirect(url_for('admin_alerts'))
             
+        except ValueError as ve:
+            flash('Invalid price value. Please enter a valid number.', 'error')
+            return render_template('admin/create_alert.html', users=get_users_with_subscriptions())
         except Exception as e:
             db.session.rollback()
             logger.error(f"Create alert error: {e}")
             flash('Error creating alert.', 'error')
     
-    # Get all active users for the dropdown
-    users = User.query.filter_by(is_active=True).order_by(User.email).all()
-    return render_template('admin/create_alert.html', users=users)
+    # Get users with active subscriptions and their coins
+    users_with_subs = get_users_with_subscriptions()
+    return render_template('admin/create_alert.html', users=users_with_subs)
+
+def get_users_with_subscriptions():
+    """Helper function to get users with their active subscriptions and coin data"""
+    users_data = []
+    
+    # Get users with active subscriptions
+    users = User.query.join(Subscription)\
+        .filter(Subscription.status == 'active')\
+        .filter(User.is_active == True)\
+        .order_by(User.email).all()
+    
+    for user in users:
+        subscription = user.get_active_subscription()
+        if subscription:
+            try:
+                coins = json.loads(subscription.coins) if subscription.coins else []
+            except (json.JSONDecodeError, TypeError):
+                coins = []
+            
+            users_data.append({
+                'id': user.id,
+                'email': user.email,
+                'display_name': user.display_name,
+                'plan_type': subscription.plan_type,
+                'coins': coins,
+                'coin_count': len(coins)
+            })
+    
+    return users_data
 
 @app.route('/admin/alerts/broadcast', methods=['GET', 'POST'])
 @admin_required
