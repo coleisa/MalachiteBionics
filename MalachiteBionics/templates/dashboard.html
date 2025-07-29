@@ -394,27 +394,50 @@
                             </button>
                         </div>
 
-                        <!-- iPhone/In-App Browser Instructions -->
+                        <!-- Universal Browser Instructions -->
                         <div class="mt-3 p-3 bg-info bg-opacity-10 rounded" id="iphone-instructions" style="display: none;">
                             <h6 class="fw-semibold mb-2">
-                                <i class="fas fa-mobile-alt me-1"></i>Enable Mobile Alerts
+                                <i class="fas fa-mobile-alt me-1"></i>Switch to Full Browser
                             </h6>
-                            <p class="small mb-2">For instant trading notifications on your phone, open this site in:</p>
+                            <p class="small mb-2">For instant trading notifications, open this site in a full browser:</p>
                             <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <button class="btn btn-sm btn-outline-primary w-100" onclick="openInSafari()">
-                                        <i class="fas fa-external-link-alt me-1"></i>Safari
+                                <div class="col-4">
+                                    <button class="btn btn-sm btn-outline-primary w-100" onclick="openInBrowser('safari')">
+                                        <i class="fab fa-safari me-1"></i>Safari
                                     </button>
                                 </div>
-                                <div class="col-6">
-                                    <button class="btn btn-sm btn-outline-success w-100" onclick="copyWebsiteUrl()">
-                                        <i class="fas fa-copy me-1"></i>Copy Link
+                                <div class="col-4">
+                                    <button class="btn btn-sm btn-outline-success w-100" onclick="openInBrowser('chrome')">
+                                        <i class="fab fa-chrome me-1"></i>Chrome
+                                    </button>
+                                </div>
+                                <div class="col-4">
+                                    <button class="btn btn-sm btn-outline-warning w-100" onclick="copyWebsiteUrl()">
+                                        <i class="fas fa-copy me-1"></i>Copy
                                     </button>
                                 </div>
                             </div>
                             <p class="small text-success mb-0">
                                 <i class="fas fa-bell me-1"></i>
                                 <strong>Recommended:</strong> Get alerts instantly instead of checking manually.
+                            </p>
+                        </div>
+
+                        <!-- Safari-specific instructions -->
+                        <div class="mt-3 p-3 bg-warning bg-opacity-10 rounded" id="safari-instructions" style="display: none;">
+                            <h6 class="fw-semibold mb-2">
+                                <i class="fab fa-safari me-1"></i>Safari Setup Required
+                            </h6>
+                            <p class="small mb-2">Safari notifications need a few extra steps:</p>
+                            <ol class="small mb-3">
+                                <li>Tap the <strong>Share</strong> button (square with arrow)</li>
+                                <li>Select <strong>"Add to Home Screen"</strong></li>
+                                <li>Open the site from your home screen</li>
+                                <li>Enable notifications when prompted</li>
+                            </ol>
+                            <p class="small text-success mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                This allows Safari to send notifications even when the browser is closed.
                             </p>
                         </div>
                     </div>
@@ -635,195 +658,398 @@ let pushManager = null;
 
 // Initialize notifications when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    // Debug: Log browser info for troubleshooting
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent) && !/GSA/i.test(navigator.userAgent);
-    const isEdge = /Edg/i.test(navigator.userAgent);
-    const isGoogleApp = /GSA/i.test(navigator.userAgent);
-    const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent) && !/GSA/i.test(navigator.userAgent);
-    const isInAppBrowser = /GSA|FBAN|FBAV|Instagram|LinkedIn|Twitter/i.test(navigator.userAgent);
+    // Comprehensive browser and device detection
+    const userAgent = navigator.userAgent;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const isTablet = /iPad|Android(?!.*Mobile)/i.test(userAgent);
+    const isDesktop = !isMobile && !isTablet;
+    
+    // Browser detection
+    const isChrome = /Chrome/i.test(userAgent) && !/Edg|GSA|FBAN|FBAV/i.test(userAgent);
+    const isEdge = /Edg/i.test(userAgent);
+    const isFirefox = /Firefox/i.test(userAgent);
+    const isSafari = /Safari/i.test(userAgent) && !/Chrome|Edg|GSA/i.test(userAgent);
+    const isOpera = /Opera|OPR/i.test(userAgent);
+    
+    // Special browsers and apps
+    const isGoogleApp = /GSA/i.test(userAgent);
+    const isFacebookApp = /FBAN|FBAV/i.test(userAgent);
+    const isInstagramApp = /Instagram/i.test(userAgent);
+    const isLinkedInApp = /LinkedIn/i.test(userAgent);
+    const isTwitterApp = /Twitter/i.test(userAgent);
+    const isDiscordApp = /Discord/i.test(userAgent);
+    const isWhatsAppApp = /WhatsApp/i.test(userAgent);
+    const isTelegramApp = /Telegram/i.test(userAgent);
+    const isInAppBrowser = isGoogleApp || isFacebookApp || isInstagramApp || isLinkedInApp || isTwitterApp || isDiscordApp || isWhatsAppApp || isTelegramApp;
+    
+    // Operating system detection
+    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+    const isAndroid = /Android/i.test(userAgent);
+    const isWindows = /Windows/i.test(userAgent);
+    const isMacOS = /Macintosh|Mac OS X/i.test(userAgent);
+    const isLinux = /Linux/i.test(userAgent) && !isAndroid;
+    
+    // Feature detection
     const hasServiceWorker = 'serviceWorker' in navigator;
     const hasPushManager = 'PushManager' in window;
     const hasNotifications = 'Notification' in window;
     const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
     
-    console.log('Push Notification Debug Info:', {
-        userAgent: navigator.userAgent,
-        isMobile,
-        isChrome,
-        isEdge,
-        isGoogleApp,
-        isSafari,
-        isInAppBrowser,
-        hasServiceWorker,
-        hasPushManager,
-        hasNotifications,
-        isHTTPS,
-        protocol: location.protocol,
-        hostname: location.hostname
+    // Enhanced version detection for better compatibility checking
+    function getBrowserVersion() {
+        const userAgent = navigator.userAgent;
+        
+        if (isChrome) {
+            const match = userAgent.match(/Chrome\/(\d+)\.(\d+)/);
+            return match ? { major: parseInt(match[1]), minor: parseInt(match[2]), string: `${match[1]}.${match[2]}` } : null;
+        } else if (isSafari && isIOS) {
+            const match = userAgent.match(/OS (\d+)_(\d+)/);
+            return match ? { major: parseInt(match[1]), minor: parseInt(match[2]), string: `${match[1]}.${match[2]}` } : null;
+        } else if (isFirefox) {
+            const match = userAgent.match(/Firefox\/(\d+)\.(\d+)/);
+            return match ? { major: parseInt(match[1]), minor: parseInt(match[2]), string: `${match[1]}.${match[2]}` } : null;
+        } else if (isEdge) {
+            const match = userAgent.match(/Edg\/(\d+)\.(\d+)/);
+            return match ? { major: parseInt(match[1]), minor: parseInt(match[2]), string: `${match[1]}.${match[2]}` } : null;
+        }
+        
+        return null;
+    }
+    
+    const browserVersion = getBrowserVersion();
+    
+    // Minimum version requirements for notifications
+    const minVersions = {
+        chrome: 50,
+        firefox: 44,
+        edge: 79,
+        safari_ios: 16.4
+    };
+    
+    function isVersionSupported() {
+        if (!browserVersion) return false;
+        
+        if (isChrome) return browserVersion.major >= minVersions.chrome;
+        if (isFirefox) return browserVersion.major >= minVersions.firefox;
+        if (isEdge) return browserVersion.major >= minVersions.edge;
+        if (isSafari && isIOS) return parseFloat(browserVersion.string) >= minVersions.safari_ios;
+        
+        return true; // Assume supported for other browsers
+    }
+    
+    console.log('Comprehensive Browser Detection:', {
+        userAgent,
+        device: { isMobile, isTablet, isDesktop },
+        browser: { isChrome, isEdge, isFirefox, isSafari, isOpera },
+        inAppBrowser: { isGoogleApp, isFacebookApp, isInstagramApp, isLinkedInApp, isTwitterApp, isDiscordApp, isWhatsAppApp, isTelegramApp },
+        os: { isIOS, isAndroid, isWindows, isMacOS, isLinux },
+        features: { hasServiceWorker, hasPushManager, hasNotifications, isHTTPS },
+        browserVersion
     });
     
     // Show debug panel for troubleshooting
     const debugPanel = document.getElementById('debug-panel');
     const debugInfo = document.getElementById('debug-info');
     
-    // Populate debug information
+    // Populate comprehensive debug information
+    let deviceType = isDesktop ? 'Desktop' : isTablet ? 'Tablet' : 'Mobile';
+    let browserName = 'Unknown';
+    if (isInAppBrowser) {
+        if (isGoogleApp) browserName = 'Google Search App';
+        else if (isFacebookApp) browserName = 'Facebook App';
+        else if (isInstagramApp) browserName = 'Instagram App';
+        else if (isLinkedInApp) browserName = 'LinkedIn App';
+        else if (isTwitterApp) browserName = 'Twitter App';
+        else if (isDiscordApp) browserName = 'Discord App';
+        else if (isWhatsAppApp) browserName = 'WhatsApp App';
+        else if (isTelegramApp) browserName = 'Telegram App';
+        else browserName = 'In-App Browser';
+    } else if (isChrome) browserName = 'Chrome';
+    else if (isEdge) browserName = 'Edge';
+    else if (isFirefox) browserName = 'Firefox';
+    else if (isSafari) browserName = 'Safari';
+    else if (isOpera) browserName = 'Opera';
+    
+    let osName = 'Unknown';
+    if (isIOS) osName = 'iOS';
+    else if (isAndroid) osName = 'Android';
+    else if (isWindows) osName = 'Windows';
+    else if (isMacOS) osName = 'macOS';
+    else if (isLinux) osName = 'Linux';
+    
     debugInfo.innerHTML = `
-        <div><strong>Browser:</strong> ${isGoogleApp ? 'Google App' : isChrome ? 'Chrome' : isEdge ? 'Edge' : isSafari ? 'Safari' : 'Other'}</div>
-        <div><strong>Mobile:</strong> ${isMobile ? 'Yes' : 'No'}</div>
+        <div><strong>Device:</strong> ${deviceType} (${osName})</div>
+        <div><strong>Browser:</strong> ${browserName} ${browserVersion ? `v${browserVersion.string}` : ''}</div>
+        <div><strong>Version Supported:</strong> ${isVersionSupported() ? 'Yes' : 'No'}</div>
         <div><strong>In-App Browser:</strong> ${isInAppBrowser ? 'Yes (Limited Features)' : 'No'}</div>
         <div><strong>HTTPS:</strong> ${isHTTPS ? 'Yes' : 'No'}</div>
         <div><strong>Service Worker:</strong> ${hasServiceWorker ? 'Supported' : 'Not Supported'}</div>
         <div><strong>Push Manager:</strong> ${hasPushManager ? 'Available' : 'Not Available'}</div>
         <div><strong>Notifications:</strong> ${hasNotifications ? 'Supported' : 'Not Supported'}</div>
         <div><strong>Permission:</strong> ${hasNotifications ? Notification.permission : 'N/A'}</div>
-        <div class="mt-2"><strong>User Agent:</strong><br><small>${navigator.userAgent}</small></div>
+        <div><strong>Overall Compatible:</strong> ${compatibility.compatible ? 'Yes' : 'No'}</div>
+        <div class="mt-2"><strong>User Agent:</strong><br><small>${userAgent}</small></div>
     `;
     
-    // Check if we're on HTTPS (required for service workers on mobile)
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        if (isChrome && isMobile) {
-            document.getElementById('notification-status').textContent = 'Chrome mobile needs HTTPS - site must be secure for notifications';
-        } else if (isGoogleApp) {
-            document.getElementById('notification-status').textContent = 'Not available in search app';
-        } else if (isInAppBrowser) {
-            document.getElementById('notification-status').textContent = 'Not available in this browser';
-        } else if (isChrome) {
-            document.getElementById('notification-status').textContent = 'Chrome needs secure connection';
-        } else {
-            document.getElementById('notification-status').textContent = 'Secure connection required';
-        }
-        document.getElementById('notification-status').className = 'status-error';
-        document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
-        return;
-    }
-    
-    // Check browser support with better mobile detection
-    if (!('serviceWorker' in navigator)) {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isEdge = /Edg/i.test(navigator.userAgent);
-        const isChrome = /Chrome/i.test(navigator.userAgent) && !isEdge;
-        
-        if (isMobile && isChrome) {
-            document.getElementById('notification-status').textContent = 'Chrome mobile detected - try updating Chrome or check site permissions';
-        } else if (isGoogleApp) {
-            document.getElementById('notification-status').textContent = 'Google App detected - please open website in Safari or Chrome browser';
-        } else if (isInAppBrowser) {
-            document.getElementById('notification-status').textContent = 'In-app browser detected - please open website in Safari or Chrome browser';
-        } else if (isMobile) {
-            document.getElementById('notification-status').textContent = 'Try Chrome, Safari, or Edge for mobile notifications';
-        } else if (isEdge) {
-            document.getElementById('notification-status').textContent = 'Please update Microsoft Edge to the latest version';
-        } else {
-            document.getElementById('notification-status').textContent = 'Please use Chrome, Firefox, Safari, or Edge browser';
-        }
-        document.getElementById('notification-status').className = 'status-error';
-        document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
-        
-        // Show iPhone instructions for Google App users
-        if (isGoogleApp || (isInAppBrowser && /iPhone|iPad|iPod/i.test(navigator.userAgent))) {
-            document.getElementById('iphone-instructions').style.display = 'block';
-        }
-        return;
-    }
-    
-    if (!('PushManager' in window)) {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isEdge = /Edg/i.test(navigator.userAgent);
-        const isChrome = /Chrome/i.test(navigator.userAgent) && !isEdge;
-        
-        if (isMobile && isChrome) {
-            document.getElementById('notification-status').textContent = 'Chrome mobile - notifications may be disabled in site settings';
-        } else if (isGoogleApp) {
-            document.getElementById('notification-status').textContent = 'Google App has limited features - open website in Safari or Chrome for notifications';
-        } else if (isInAppBrowser) {
-            document.getElementById('notification-status').textContent = 'In-app browser has limited features - open website in Safari or Chrome';
-        } else if (isMobile) {
-            document.getElementById('notification-status').textContent = 'Try Chrome, Safari, or Edge for mobile notifications';
-        } else if (isEdge) {
-            document.getElementById('notification-status').textContent = 'Microsoft Edge detected - notifications may need enabling in settings';
-        } else if (isChrome) {
-            document.getElementById('notification-status').textContent = 'Chrome detected but notifications unavailable - check site permissions';
-        } else {
-            document.getElementById('notification-status').textContent = 'Push notifications not available - try Chrome, Firefox, Safari, or Edge';
-        }
-        document.getElementById('notification-status').className = 'status-error';
-        document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
-        return;
-    }
-    
-    if (!('Notification' in window)) {
-        document.getElementById('notification-status').textContent = 'Browser notifications not supported';
-        document.getElementById('notification-status').className = 'status-error';
-        return;
-    }
-    
-    try {
-        // Get VAPID public key from server
-        const response = await fetch('/api/push/vapid-public-key');
-        if (!response.ok) {
-            throw new Error('Server connection failed');
+    // Comprehensive compatibility assessment and user guidance
+    function getCompatibilityStatus() {
+        // Check HTTPS requirement
+        if (!isHTTPS) {
+            return {
+                compatible: false,
+                reason: 'security',
+                message: 'Secure connection required for notifications',
+                solution: 'Contact support - site needs HTTPS certificate',
+                canFix: false
+            };
         }
         
-        const data = await response.json();
+        // Check for in-app browsers (most restrictive)
+        if (isInAppBrowser) {
+            let appName = 'this app';
+            let recommendedBrowser = 'Chrome or Safari';
+            
+            if (isGoogleApp) appName = 'Google Search';
+            else if (isFacebookApp) appName = 'Facebook';
+            else if (isInstagramApp) appName = 'Instagram';
+            else if (isLinkedInApp) appName = 'LinkedIn';
+            else if (isTwitterApp) appName = 'Twitter';
+            else if (isDiscordApp) appName = 'Discord';
+            else if (isWhatsAppApp) appName = 'WhatsApp';
+            else if (isTelegramApp) appName = 'Telegram';
+            
+            if (isIOS) recommendedBrowser = 'Safari';
+            else if (isAndroid) recommendedBrowser = 'Chrome';
+            
+            return {
+                compatible: false,
+                reason: 'in-app-browser',
+                message: `${appName} browser has limited features`,
+                solution: `Open this site in ${recommendedBrowser} for full functionality`,
+                canFix: true,
+                showInstructions: true
+            };
+        }
         
-        if (data.publicKey) {
-            // Register service worker with better error handling
-            try {
-                const swRegistration = await navigator.serviceWorker.register('/static/sw.js');
-                console.log('Service Worker registered successfully');
-                
-                pushManager = {
-                    swRegistration: swRegistration,
-                    publicKey: data.publicKey,
-                    isSubscribed: false
-                };
-                
-                // Check current subscription status
-                const subscription = await swRegistration.pushManager.getSubscription();
-                pushManager.isSubscribed = !(subscription === null);
-                
-                updateNotificationUI();
-            } catch (swError) {
-                console.error('Service Worker registration failed:', swError);
-                // More user-friendly error messages with browser-specific help
-                const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
-                const isEdge = /Edg/i.test(navigator.userAgent);
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                
-                let errorMessage = 'Push notifications unavailable';
-                
-                if (swError.message.includes('not found') || swError.message.includes('404')) {
-                    errorMessage = 'Service configuration issue - contact support';
-                } else if (swError.message.includes('secure') || swError.message.includes('https')) {
-                    errorMessage = 'HTTPS required for notifications';
-                } else if (isChrome && isMobile) {
-                    errorMessage = 'Chrome mobile - check Chrome settings > Site Settings > Notifications';
-                } else if (isChrome && !isMobile) {
-                    errorMessage = 'Chrome issue - check site permissions in browser settings';
-                } else if (isEdge) {
-                    errorMessage = 'Edge detected - try enabling notifications in browser settings';
-                } else if (isMobile) {
-                    errorMessage = 'Try Chrome, Safari, or Edge browser';
+        // Check browser compatibility
+        if (!hasServiceWorker) {
+            if (isSafari && isIOS) {
+                if (!isVersionSupported()) {
+                    return {
+                        compatible: false,
+                        reason: 'safari-version',
+                        message: `Safari notifications need iOS 16.4 or later (you have ${browserVersion ? browserVersion.string : 'unknown'})`,
+                        solution: 'Update your iPhone/iPad to iOS 16.4+ in Settings > General > Software Update',
+                        canFix: true
+                    };
                 } else {
-                    errorMessage = 'Browser issue - try Chrome, Firefox, Safari, or Edge';
+                    return {
+                        compatible: false,
+                        reason: 'safari-setup',
+                        message: 'Safari needs special setup for notifications',
+                        solution: 'Add this site to your Home Screen for full notification support',
+                        canFix: true,
+                        showSafariInstructions: true
+                    };
                 }
-                
-                document.getElementById('notification-status').textContent = errorMessage;
-                document.getElementById('notification-status').className = 'status-error';
-                document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
+            } else if (isChrome) {
+                if (!isVersionSupported()) {
+                    return {
+                        compatible: false,
+                        reason: 'chrome-version',
+                        message: `Chrome version is too old for notifications (you have v${browserVersion ? browserVersion.string : 'unknown'})`,
+                        solution: 'Update Chrome to the latest version from Google Play Store or chrome.google.com',
+                        canFix: true
+                    };
+                } else {
+                    return {
+                        compatible: false,
+                        reason: 'chrome-settings',
+                        message: 'Chrome notifications may be disabled',
+                        solution: 'Check Chrome Settings > Site Settings > Notifications and allow this site',
+                        canFix: true
+                    };
+                }
+            } else if (isFirefox) {
+                if (!isVersionSupported()) {
+                    return {
+                        compatible: false,
+                        reason: 'firefox-version',
+                        message: `Firefox version is too old for notifications (you have v${browserVersion ? browserVersion.string : 'unknown'})`,
+                        solution: 'Update Firefox to the latest version',
+                        canFix: true
+                    };
+                } else {
+                    return {
+                        compatible: false,
+                        reason: 'firefox-settings',
+                        message: 'Firefox notifications may be disabled',
+                        solution: 'Check Firefox Settings > Privacy & Security > Notifications and allow this site',
+                        canFix: true
+                    };
+                }
+            } else if (isEdge) {
+                if (!isVersionSupported()) {
+                    return {
+                        compatible: false,
+                        reason: 'edge-version',
+                        message: `Edge version is too old for notifications (you have v${browserVersion ? browserVersion.string : 'unknown'})`,
+                        solution: 'Update Microsoft Edge to the latest version',
+                        canFix: true
+                    };
+                } else {
+                    return {
+                        compatible: false,
+                        reason: 'edge-settings',
+                        message: 'Edge notifications may be disabled',
+                        solution: 'Check Edge Settings > Site permissions > Notifications and allow this site',
+                        canFix: true
+                    };
+                }
+            } else {
+                return {
+                    compatible: false,
+                    reason: 'unsupported-browser',
+                    message: 'Browser does not support notifications',
+                    solution: 'Switch to Chrome, Firefox, Safari, or Edge for notification support',
+                    canFix: true
+                };
             }
-        } else {
-            document.getElementById('notification-status').textContent = 'Not available';
+        }
+        
+        // Check PushManager
+        if (!hasPushManager) {
+            if (isSafari && isIOS) {
+                return {
+                    compatible: false,
+                    reason: 'safari-pwa',
+                    message: 'Safari notifications require PWA installation',
+                    solution: 'Add this site to Home Screen using Share button, then open from Home Screen',
+                    canFix: true,
+                    showSafariInstructions: true
+                };
+            } else {
+                return {
+                    compatible: false,
+                    reason: 'push-manager',
+                    message: 'Browser push notifications are disabled',
+                    solution: 'Enable push notifications in your browser settings',
+                    canFix: true
+                };
+            }
+        }
+        
+        // Check Notification API
+        if (!hasNotifications) {
+            return {
+                compatible: false,
+                reason: 'notification-api',
+                message: 'Browser notification API is not available',
+                solution: 'Update your browser to the latest version',
+                canFix: true
+            };
+        }
+        
+        // All checks passed
+        return {
+            compatible: true,
+            message: 'Ready to enable notifications',
+            solution: null
+        };
+    }
+    
+    const compatibility = getCompatibilityStatus();
+    
+    // Update UI based on compatibility
+    if (compatibility.compatible) {
+        // Everything is compatible, proceed with normal flow
+        try {
+            // Get VAPID public key from server
+            const response = await fetch('/api/push/vapid-public-key');
+            if (!response.ok) {
+                throw new Error('Server connection failed');
+            }
+            
+            const data = await response.json();
+            
+            if (data.publicKey) {
+                // Register service worker
+                try {
+                    const swRegistration = await navigator.serviceWorker.register('/static/sw.js');
+                    console.log('Service Worker registered successfully');
+                    
+                    pushManager = {
+                        swRegistration: swRegistration,
+                        publicKey: data.publicKey,
+                        isSubscribed: false
+                    };
+                    
+                    // Check current subscription status
+                    const subscription = await swRegistration.pushManager.getSubscription();
+                    pushManager.isSubscribed = !(subscription === null);
+                    
+                    updateNotificationUI();
+                } catch (swError) {
+                    console.error('Service Worker registration failed:', swError);
+                    document.getElementById('notification-status').textContent = 'Service worker registration failed - contact support';
+                    document.getElementById('notification-status').className = 'status-error';
+                    document.getElementById('debug-panel').style.display = 'block';
+                }
+            } else {
+                document.getElementById('notification-status').textContent = 'Server configuration error - contact support';
+                document.getElementById('notification-status').className = 'status-error';
+            }
+        } catch (error) {
+            console.error('Failed to initialize notifications:', error);
+            document.getElementById('notification-status').textContent = 'Connection error - check your internet connection';
             document.getElementById('notification-status').className = 'status-error';
         }
-    } catch (error) {
-        console.error('Failed to initialize notifications:', error);
-        document.getElementById('notification-status').textContent = 'Not available';
+    } else {
+        // Handle incompatibility with helpful guidance
+        document.getElementById('notification-status').textContent = compatibility.message;
         document.getElementById('notification-status').className = 'status-error';
+        document.getElementById('debug-panel').style.display = 'block';
+        
+        // Show appropriate instruction panels
+        if (compatibility.showInstructions && (isInAppBrowser || (!isIOS && !isAndroid))) {
+            document.getElementById('iphone-instructions').style.display = 'block';
+        }
+        
+        if (compatibility.showSafariInstructions && isSafari && isIOS) {
+            document.getElementById('safari-instructions').style.display = 'block';
+        }
+        
+        // Create solution panel
+        if (compatibility.solution) {
+            createSolutionPanel(compatibility);
+        }
+    }
+    
+    function createSolutionPanel(compatibility) {
+        const solutionPanel = document.createElement('div');
+        solutionPanel.className = 'mt-3 p-3 bg-primary bg-opacity-10 rounded';
+        solutionPanel.id = 'solution-panel';
+        
+        let solutionIcon = 'fas fa-tools';
+        if (compatibility.reason === 'in-app-browser') solutionIcon = 'fas fa-external-link-alt';
+        else if (compatibility.reason.includes('safari')) solutionIcon = 'fab fa-safari';
+        else if (compatibility.reason.includes('chrome')) solutionIcon = 'fab fa-chrome';
+        else if (compatibility.reason === 'security') solutionIcon = 'fas fa-shield-alt';
+        
+        solutionPanel.innerHTML = `
+            <h6 class="fw-semibold mb-2">
+                <i class="${solutionIcon} me-1"></i>How to Fix This
+            </h6>
+            <p class="small mb-2">${compatibility.solution}</p>
+            ${compatibility.canFix ? 
+                '<p class="small text-success mb-0"><i class="fas fa-check-circle me-1"></i><strong>Good news:</strong> This can be fixed easily!</p>' :
+                '<p class="small text-warning mb-0"><i class="fas fa-exclamation-triangle me-1"></i>Please contact support for assistance.</p>'
+            }
+        `;
+        
+        // Insert after the debug panel
+        const debugPanel = document.getElementById('debug-panel');
+        debugPanel.parentNode.insertBefore(solutionPanel, debugPanel.nextSibling);
     }
 });
 
@@ -971,16 +1197,48 @@ Timestamp: ${new Date().toISOString()}`;
     }
 }
 
-function openInSafari() {
-    // For iOS, this will attempt to open the URL in Safari
+function openInBrowser(browserType) {
     const currentUrl = window.location.href;
-    // iOS Safari URL scheme
-    window.location.href = `safari://${currentUrl.replace('https://', '')}`;
     
-    // Fallback: show instructions
-    setTimeout(() => {
-        showAlert('If Safari didn\'t open, try: Share button → "Open in Safari"', 'info');
-    }, 1000);
+    if (browserType === 'safari') {
+        // Try iOS Safari URL scheme
+        if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            window.location.href = `safari://${currentUrl.replace('https://', '')}`;
+            
+            // Fallback instructions
+            setTimeout(() => {
+                showAlert('If Safari didn\'t open, try: Share button → "Open in Safari"', 'info');
+            }, 1000);
+        } else {
+            // Desktop or other platforms
+            showAlert('Please copy the URL and paste it into Safari browser', 'info');
+            copyWebsiteUrl();
+        }
+    } else if (browserType === 'chrome') {
+        // Try Chrome URL scheme
+        if (/Android/i.test(navigator.userAgent)) {
+            window.location.href = `googlechrome://${currentUrl.replace('https://', '')}`;
+            
+            setTimeout(() => {
+                showAlert('If Chrome didn\'t open, please copy the URL and open Chrome manually', 'info');
+            }, 1000);
+        } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            window.location.href = `googlechrome://${currentUrl.replace('https://', '')}`;
+            
+            setTimeout(() => {
+                showAlert('If Chrome didn\'t open, please copy the URL and open Chrome app', 'info');
+            }, 1000);
+        } else {
+            // Desktop
+            showAlert('Please copy the URL and paste it into Chrome browser', 'info');
+            copyWebsiteUrl();
+        }
+    }
+}
+
+function openInSafari() {
+    // Legacy function - redirect to new function
+    openInBrowser('safari');
 }
 
 function copyWebsiteUrl() {
