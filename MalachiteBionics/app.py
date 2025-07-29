@@ -221,13 +221,15 @@ def load_user(user_uuid):
     try:
         user = User.query.filter_by(uuid=user_uuid).first()
         if user:
-            user.update_last_seen()
-            # Commit the last_seen update
+            # Only update last_seen if the field exists and we can safely commit
             try:
-                db.session.commit()
+                if hasattr(user, 'last_seen'):
+                    user.last_seen = datetime.utcnow()
+                    db.session.commit()
             except Exception as commit_error:
-                logger.error(f"Failed to commit last_seen update for user {user_uuid}: {commit_error}")
+                logger.error(f"Failed to update last_seen for user {user_uuid}: {commit_error}")
                 db.session.rollback()
+                # Don't fail the login, just log the error
         return user
     except Exception as e:
         logger.error(f"Error loading user {user_uuid}: {e}")
@@ -777,19 +779,24 @@ def login():
                 flash('Please verify your email before logging in. Check your inbox for the verification link.', 'warning')
                 return render_template('login.html')
             
-            # Update login tracking
-            user.last_login = datetime.utcnow()
-            user.login_count += 1
-            user.update_last_seen()
-            
-            # Commit all changes
+            # Update login tracking (simplified to avoid database issues)
             try:
+                user.last_login = datetime.utcnow()
+                if hasattr(user, 'login_count') and user.login_count is not None:
+                    user.login_count += 1
+                else:
+                    user.login_count = 1
+                    
+                # Only update last_seen if the field exists
+                if hasattr(user, 'last_seen'):
+                    user.last_seen = datetime.utcnow()
+                
                 db.session.commit()
-            except Exception as e:
-                logger.error(f"Database error during login: {e}")
+                logger.info(f"Updated login tracking for user {user.email}")
+            except Exception as db_error:
+                logger.error(f"Database error during login tracking: {db_error}")
                 db.session.rollback()
-                flash('Login failed due to a database error. Please try again.', 'error')
-                return render_template('login.html')
+                # Continue with login even if tracking fails
             
             login_user(user, remember=True, duration=timedelta(days=30))
             logger.info(f"User {user.email} logged in successfully")
