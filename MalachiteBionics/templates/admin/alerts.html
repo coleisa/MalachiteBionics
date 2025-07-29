@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Alert Management - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-bell"></i> Trading Alert Management
+                        </h4>
+                        <div>
+                            <a href="{{ url_for('admin_create_alert') }}" class="btn btn-success me-2">
+                                <i class="fas fa-plus"></i> Create Individual Alert
+                            </a>
+                            <a href="{{ url_for('admin_broadcast_alert') }}" class="btn btn-warning">
+                                <i class="fas fa-broadcast-tower"></i> Broadcast Alert
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5>{{ stats.total_alerts }}</h5>
+                                    <small>Total Alerts</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5>{{ stats.alerts_today }}</h5>
+                                    <small>Today's Alerts</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h5>{{ stats.unread_alerts }}</h5>
+                                    <small>Unread Alerts</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5>{{ alerts.pages }}</h5>
+                                    <small>Total Pages</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts Table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>User</th>
+                                    <th>Coin Pair</th>
+                                    <th>Type</th>
+                                    <th>Price</th>
+                                    <th>Confidence</th>
+                                    <th>Algorithm</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in alerts.items %}
+                                <tr class="{% if not alert.is_read %}table-warning{% endif %}">
+                                    <td>
+                                        <small>{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        {% if alert.expires_at %}
+                                            <br><small class="text-muted">Expires: {{ alert.expires_at.strftime('%m/%d %H:%M') }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ alert.user.email }}</strong>
+                                        <br><small class="text-muted">{{ alert.user.display_name }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ alert.coin_pair }}</span>
+                                    </td>
+                                    <td>
+                                        {% if alert.alert_type == 'buy' %}
+                                            <span class="badge bg-success">🟢 BUY</span>
+                                        {% elif alert.alert_type == 'sell' %}
+                                            <span class="badge bg-danger">🔴 SELL</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">🟡 HOLD</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if alert.price > 0 %}
+                                            ${{ "%.2f"|format(alert.price) }}
+                                        {% else %}
+                                            <small class="text-muted">N/A</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar 
+                                                {% if alert.confidence >= 80 %}bg-success
+                                                {% elif alert.confidence >= 60 %}bg-warning
+                                                {% else %}bg-danger{% endif %}" 
+                                                role="progressbar" 
+                                                style="width: {{ alert.confidence }}%">
+                                                {{ alert.confidence }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ alert.algorithm.upper() }}</span>
+                                    </td>
+                                    <td>
+                                        {% if alert.is_read %}
+                                            <span class="badge bg-success">Read</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Unread</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ alert.message[:100] }}{% if alert.message|length > 100 %}...{% endif %}</small>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        <i class="fas fa-bell-slash fa-2x"></i>
+                                        <br>No alerts found.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if alerts.pages > 1 %}
+                    <nav aria-label="Alert pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if alerts.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin_alerts', page=alerts.prev_num) }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in alerts.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != alerts.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin_alerts', page=page_num) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if alerts.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin_alerts', page=alerts.next_num) }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

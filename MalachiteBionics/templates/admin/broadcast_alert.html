@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Broadcast Alert - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-broadcast-tower"></i> Broadcast Trading Alert
+                    </h4>
+                    <small>Send a trading signal to multiple users based on their subscription plan</small>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" id="broadcastForm">
+                        <!-- Plan Filter -->
+                        <div class="mb-3">
+                            <label for="plan_filter" class="form-label">
+                                <i class="fas fa-filter"></i> Target Audience <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="plan_filter" name="plan_filter" required>
+                                <option value="all">All Active Subscribers</option>
+                                <option value="v3">Basic (V3) Users Only</option>
+                                <option value="v6">Classic (V6) Users Only</option>
+                                <option value="v9">Premium (V9) Users Only</option>
+                                <option value="elite">Elite Users Only</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Choose which users will receive this alert based on their subscription plan.
+                            </small>
+                        </div>
+
+                        <!-- Coin Selection -->
+                        <div class="mb-3">
+                            <label for="coin_pair" class="form-label">
+                                <i class="fas fa-coins"></i> Cryptocurrency Pair <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="coin_pair" name="coin_pair" required>
+                                <option value="">Choose cryptocurrency pair...</option>
+                                <option value="BTC/USD">Bitcoin (BTC/USD)</option>
+                                <option value="ETH/USD">Ethereum (ETH/USD)</option>
+                                <option value="BNB/USD">Binance Coin (BNB/USD)</option>
+                                <option value="ADA/USD">Cardano (ADA/USD)</option>
+                                <option value="SOL/USD">Solana (SOL/USD)</option>
+                                <option value="XRP/USD">Ripple (XRP/USD)</option>
+                                <option value="DOT/USD">Polkadot (DOT/USD)</option>
+                                <option value="DOGE/USD">Dogecoin (DOGE/USD)</option>
+                                <option value="AVAX/USD">Avalanche (AVAX/USD)</option>
+                                <option value="LUNA/USD">Terra Luna (LUNA/USD)</option>
+                                <option value="LINK/USD">Chainlink (LINK/USD)</option>
+                                <option value="UNI/USD">Uniswap (UNI/USD)</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Only users who have this cryptocurrency in their 2-coin selection will receive the alert.
+                            </small>
+                        </div>
+
+                        <!-- Alert Type -->
+                        <div class="mb-3">
+                            <label for="alert_type" class="form-label">
+                                <i class="fas fa-chart-line"></i> Signal Type <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="alert_type" name="alert_type" required>
+                                <option value="">Choose signal type...</option>
+                                <option value="buy">🟢 BUY Signal - Recommend Purchase</option>
+                                <option value="sell">🔴 SELL Signal - Recommend Sale</option>
+                                <option value="hold">🟡 HOLD Signal - Maintain Position</option>
+                            </select>
+                        </div>
+
+                        <!-- Price -->
+                        <div class="mb-3">
+                            <label for="price" class="form-label">
+                                <i class="fas fa-dollar-sign"></i> Current Price (USD)
+                            </label>
+                            <input type="number" class="form-control" id="price" name="price" 
+                                   step="0.01" min="0" placeholder="e.g., 45000.50">
+                            <small class="form-text text-muted">
+                                Enter the current market price at which this signal is triggered.
+                            </small>
+                        </div>
+
+                        <!-- Algorithm -->
+                        <div class="mb-3">
+                            <label for="algorithm" class="form-label">
+                                <i class="fas fa-brain"></i> Algorithm Source <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="algorithm" name="algorithm" required>
+                                <option value="">Choose algorithm...</option>
+                                <option value="v3">Basic Algorithm (V3)</option>
+                                <option value="v6">Classic Algorithm (V6)</option>
+                                <option value="v9">Premium Algorithm (V9)</option>
+                                <option value="elite">Elite Algorithm</option>
+                                <option value="manual">Manual Analysis</option>
+                            </select>
+                        </div>
+
+                        <!-- Confidence -->
+                        <div class="mb-3">
+                            <label for="confidence" class="form-label">
+                                <i class="fas fa-percentage"></i> Confidence Level
+                            </label>
+                            <div class="input-group">
+                                <input type="range" class="form-range" id="confidence" name="confidence" 
+                                       min="1" max="100" value="85" oninput="updateConfidenceValue(this.value)">
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Low (1%)</small>
+                                <strong><span id="confidenceValue">85</span>%</strong>
+                                <small class="text-muted">High (100%)</small>
+                            </div>
+                        </div>
+
+                        <!-- Message -->
+                        <div class="mb-3">
+                            <label for="message" class="form-label">
+                                <i class="fas fa-comment"></i> Broadcast Message <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="message" name="message" rows="5" 
+                                      placeholder="Enter the detailed trading signal message that will be sent to all selected users..." required></textarea>
+                            <small class="form-text text-muted">
+                                This message will be sent to all users matching the selected criteria. Include comprehensive analysis and reasoning.
+                            </small>
+                        </div>
+
+                        <!-- Expires -->
+                        <div class="mb-3">
+                            <label for="expires_hours" class="form-label">
+                                <i class="fas fa-clock"></i> Signal Expires In
+                            </label>
+                            <select class="form-select" id="expires_hours" name="expires_hours">
+                                <option value="1">1 Hour</option>
+                                <option value="4">4 Hours</option>
+                                <option value="12">12 Hours</option>
+                                <option value="24" selected>24 Hours (Default)</option>
+                                <option value="48">48 Hours</option>
+                                <option value="72">72 Hours</option>
+                                <option value="168">1 Week</option>
+                            </select>
+                        </div>
+
+                        <!-- Warning Notice -->
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Broadcast Warning</h6>
+                            <p class="mb-0">This alert will be sent to <strong>ALL</strong> active subscribers matching your selected criteria. 
+                            Only users who have the selected cryptocurrency in their 2-coin subscription will receive the alert.
+                            Please double-check all information before sending.</p>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('admin_alerts') }}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-arrow-left"></i> Back to Alerts
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-broadcast-tower"></i> Broadcast Alert
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateConfidenceValue(value) {
+    document.getElementById('confidenceValue').textContent = value;
+}
+
+// Form validation and confirmation
+document.getElementById('broadcastForm').addEventListener('submit', function(e) {
+    const planFilter = document.getElementById('plan_filter').value;
+    const coinPair = document.getElementById('coin_pair').value;
+    const alertType = document.getElementById('alert_type').value;
+    const algorithm = document.getElementById('algorithm').value;
+    
+    if (!coinPair || !alertType || !algorithm) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Get plan name for confirmation
+    const planText = planFilter === 'all' ? 'ALL active subscribers' : 
+                    planFilter === 'v3' ? 'Basic (V3) users' :
+                    planFilter === 'v6' ? 'Classic (V6) users' :
+                    planFilter === 'v9' ? 'Premium (V9) users' : 'Elite users';
+    
+    const confirmMessage = `BROADCAST CONFIRMATION:\n\n` +
+                          `Signal: ${alertType.toUpperCase()} ${coinPair}\n` +
+                          `Target: ${planText}\n` +
+                          `Algorithm: ${algorithm.toUpperCase()}\n\n` +
+                          `This will send the alert to all matching users. Continue?`;
+    
+    if (!confirm(confirmMessage)) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

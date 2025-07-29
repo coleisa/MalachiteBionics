@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Create Alert - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-bell"></i> Create Individual Trading Alert
+                    </h4>
+                    <small class="text-light">Send a trading signal to a specific user based on their subscription</small>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" id="alertForm">
+                        <!-- User Selection -->
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">
+                                <i class="fas fa-user"></i> Select User <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="user_id" name="user_id" required onchange="updateCoinOptions()">
+                                <option value="">Choose a subscribed user...</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" 
+                                        data-plan="{{ user.plan_type }}"
+                                        data-coins="{{ user.coins|join(',') }}"
+                                        data-coin-count="{{ user.coin_count }}">
+                                    {{ user.email }} ({{ user.display_name }}) - 
+                                    <strong>{{ user.plan_type.upper() }}</strong> Plan - 
+                                    {{ user.coin_count }}/2 Coins Selected
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Only users with active subscriptions are shown. Each user can monitor exactly 2 cryptocurrency pairs.
+                            </small>
+                        </div>
+
+                        <!-- User Subscription Info -->
+                        <div id="userInfo" class="alert alert-info d-none mb-3">
+                            <h6><i class="fas fa-info-circle"></i> User Subscription Details:</h6>
+                            <div id="userDetails"></div>
+                        </div>
+
+                        <!-- Coin Selection -->
+                        <div class="mb-3">
+                            <label for="coin_pair" class="form-label">
+                                <i class="fas fa-coins"></i> Cryptocurrency Pair <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="coin_pair" name="coin_pair" required disabled>
+                                <option value="">First select a user to see their coins...</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Only the 2 cryptocurrency pairs selected in the user's subscription will be available.
+                            </small>
+                        </div>
+
+                        <!-- Alert Type -->
+                        <div class="mb-3">
+                            <label for="alert_type" class="form-label">
+                                <i class="fas fa-chart-line"></i> Signal Type <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="alert_type" name="alert_type" required>
+                                <option value="">Choose signal type...</option>
+                                <option value="buy">🟢 BUY Signal</option>
+                                <option value="sell">🔴 SELL Signal</option>
+                                <option value="hold">🟡 HOLD Signal</option>
+                            </select>
+                        </div>
+
+                        <!-- Price -->
+                        <div class="mb-3">
+                            <label for="price" class="form-label">
+                                <i class="fas fa-dollar-sign"></i> Current Price (USD)
+                            </label>
+                            <input type="number" class="form-control" id="price" name="price" 
+                                   step="0.01" min="0" placeholder="e.g., 45000.50">
+                            <small class="form-text text-muted">
+                                Enter the current price at which this signal is triggered.
+                            </small>
+                        </div>
+
+                        <!-- Confidence -->
+                        <div class="mb-3">
+                            <label for="confidence" class="form-label">
+                                <i class="fas fa-percentage"></i> Confidence Level
+                            </label>
+                            <div class="input-group">
+                                <input type="range" class="form-range" id="confidence" name="confidence" 
+                                       min="1" max="100" value="85" oninput="updateConfidenceValue(this.value)">
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Low (1%)</small>
+                                <strong><span id="confidenceValue">85</span>%</strong>
+                                <small class="text-muted">High (100%)</small>
+                            </div>
+                        </div>
+
+                        <!-- Message -->
+                        <div class="mb-3">
+                            <label for="message" class="form-label">
+                                <i class="fas fa-comment"></i> Alert Message <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="message" name="message" rows="4" 
+                                      placeholder="Enter the detailed trading signal message..." required></textarea>
+                            <small class="form-text text-muted">
+                                This message will be sent to the user. Include analysis, reasoning, and any important notes.
+                            </small>
+                        </div>
+
+                        <!-- Expires -->
+                        <div class="mb-3">
+                            <label for="expires_hours" class="form-label">
+                                <i class="fas fa-clock"></i> Signal Expires In
+                            </label>
+                            <select class="form-select" id="expires_hours" name="expires_hours">
+                                <option value="1">1 Hour</option>
+                                <option value="4">4 Hours</option>
+                                <option value="12">12 Hours</option>
+                                <option value="24" selected>24 Hours (Default)</option>
+                                <option value="48">48 Hours</option>
+                                <option value="72">72 Hours</option>
+                                <option value="168">1 Week</option>
+                            </select>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('admin_alerts') }}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-arrow-left"></i> Back to Alerts
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-paper-plane"></i> Send Alert
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateCoinOptions() {
+    const userSelect = document.getElementById('user_id');
+    const coinSelect = document.getElementById('coin_pair');
+    const userInfo = document.getElementById('userInfo');
+    const userDetails = document.getElementById('userDetails');
+    
+    if (!userSelect.value) {
+        coinSelect.disabled = true;
+        coinSelect.innerHTML = '<option value="">First select a user to see their coins...</option>';
+        userInfo.classList.add('d-none');
+        return;
+    }
+    
+    const selectedOption = userSelect.options[userSelect.selectedIndex];
+    const plan = selectedOption.dataset.plan;
+    const coins = selectedOption.dataset.coins.split(',').filter(coin => coin.trim());
+    const coinCount = selectedOption.dataset.coinCount;
+    const userEmail = selectedOption.text.split(' (')[0];
+    
+    // Update user info display
+    userDetails.innerHTML = `
+        <strong>Email:</strong> ${userEmail}<br>
+        <strong>Plan:</strong> ${plan.toUpperCase()} Algorithm<br>
+        <strong>Selected Coins:</strong> ${coins.join(', ')} (${coinCount}/2)<br>
+        <strong>Available for Alerts:</strong> ${coins.length > 0 ? coins.join(', ') : 'No coins selected'}
+    `;
+    userInfo.classList.remove('d-none');
+    
+    // Update coin dropdown
+    coinSelect.innerHTML = '';
+    if (coins.length === 0) {
+        coinSelect.innerHTML = '<option value="">User has no coins selected in subscription</option>';
+        coinSelect.disabled = true;
+    } else {
+        coinSelect.innerHTML = '<option value="">Choose cryptocurrency pair...</option>';
+        coins.forEach(coin => {
+            if (coin.trim()) {
+                coinSelect.innerHTML += `<option value="${coin.trim()}">${coin.trim()}</option>`;
+            }
+        });
+        coinSelect.disabled = false;
+    }
+}
+
+function updateConfidenceValue(value) {
+    document.getElementById('confidenceValue').textContent = value;
+}
+
+// Form validation
+document.getElementById('alertForm').addEventListener('submit', function(e) {
+    const userSelect = document.getElementById('user_id');
+    const coinSelect = document.getElementById('coin_pair');
+    
+    if (!userSelect.value) {
+        e.preventDefault();
+        alert('Please select a user.');
+        return;
+    }
+    
+    if (!coinSelect.value) {
+        e.preventDefault();
+        alert('Please select a cryptocurrency pair.');
+        return;
+    }
+    
+    // Confirm before sending
+    const selectedUser = userSelect.options[userSelect.selectedIndex].text.split(' (')[0];
+    const selectedCoin = coinSelect.value;
+    const alertType = document.getElementById('alert_type').value;
+    
+    if (!confirm(`Send ${alertType.toUpperCase()} signal for ${selectedCoin} to ${selectedUser}?`)) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}
