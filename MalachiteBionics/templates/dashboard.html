@@ -786,7 +786,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Check browser compatibility
-        if (!hasServiceWorker) {
+        if (!hasServiceWorker || !hasPushManager) {
             if (isSafari && isIOS) {
                 if (!isVersionSupported()) {
                     return {
@@ -866,28 +866,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     reason: 'unsupported-browser',
                     message: 'Browser does not support notifications',
                     solution: 'Switch to Chrome, Firefox, Safari, or Edge for notification support',
-                    canFix: true
-                };
-            }
-        }
-        
-        // Check PushManager
-        if (!hasPushManager) {
-            if (isSafari && isIOS) {
-                return {
-                    compatible: false,
-                    reason: 'safari-pwa',
-                    message: 'Safari notifications require PWA installation',
-                    solution: 'Add this site to Home Screen using Share button, then open from Home Screen',
-                    canFix: true,
-                    showSafariInstructions: true
-                };
-            } else {
-                return {
-                    compatible: false,
-                    reason: 'push-manager',
-                    message: 'Browser push notifications are disabled',
-                    solution: 'Enable push notifications in your browser settings',
                     canFix: true
                 };
             }
