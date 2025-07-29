@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>🤖 Bot Status Dashboard</h2>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Admin
+                </a>
+            </div>
+
+            <!-- Admin Bot Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-crown"></i> Admin Bot (Free Version)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if admin_bots %}
+                        {% for bot in admin_bots %}
+                        <div class="row align-items-center mb-3 p-3 border rounded">
+                            <div class="col-md-3">
+                                <strong>{{ bot.display_name }}</strong><br>
+                                <small class="text-muted">{{ bot.email }}</small>
+                            </div>
+                            <div class="col-md-2">
+                                {% if bot.bot_status == 'online' %}
+                                    <span class="badge badge-success">
+                                        <i class="fas fa-circle"></i> ONLINE
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary">
+                                        <i class="fas fa-circle"></i> OFFLINE
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2">
+                                <span class="badge badge-info">FREE</span>
+                            </div>
+                            <div class="col-md-2">
+                                <small>
+                                    {% for coin in bot.coins %}
+                                        <span class="badge badge-light">{{ coin }}</span>
+                                    {% endfor %}
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                {% if bot.bot_last_active %}
+                                    <small class="text-muted">
+                                        Last Active: {{ bot.bot_last_active.strftime('%Y-%m-%d %H:%M') }} UTC
+                                    </small>
+                                {% else %}
+                                    <small class="text-muted">Never active</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2">
+                                <div class="btn-group" role="group">
+                                    {% if bot.bot_status == 'offline' %}
+                                        <form method="POST" action="{{ url_for('activate_bot') }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Activate Admin Bot">
+                                                <i class="fas fa-play me-1"></i>Activate
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('deactivate_bot') }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Deactivate Admin Bot">
+                                                <i class="fas fa-stop me-1"></i>Deactivate
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No admin bots found.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Customer Bots Status -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Customer Bots ({{ customer_bots|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if customer_bots %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Status</th>
+                                        <th>Plan</th>
+                                        <th>Coins</th>
+                                        <th>Activated</th>
+                                        <th>Last Active</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bot in customer_bots %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ bot.display_name }}</strong><br>
+                                            <small class="text-muted">{{ bot.email }}</small>
+                                        </td>
+                                        <td>
+                                            {% if bot.bot_status == 'online' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-circle"></i> ONLINE
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">
+                                                    <i class="fas fa-circle"></i> OFFLINE
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if bot.plan_type == 'free' %}
+                                                <span class="badge badge-primary">FREE</span>
+                                            {% elif bot.plan_type in ['basic', 'v3'] %}
+                                                <span class="badge badge-info">BASIC</span>
+                                            {% elif bot.plan_type in ['classic', 'v6'] %}
+                                                <span class="badge badge-success">CLASSIC</span>
+                                            {% elif bot.plan_type in ['advanced', 'v9'] %}
+                                                <span class="badge badge-warning">ADVANCED</span>
+                                            {% elif bot.plan_type in ['premium', 'elite', 'v12'] %}
+                                                <span class="badge badge-danger">PREMIUM</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ bot.plan_type.upper() }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% for coin in bot.coins %}
+                                                <span class="badge badge-light">{{ coin }}</span>
+                                            {% endfor %}
+                                            {% if not bot.coins %}
+                                                <span class="text-muted">No coins selected</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if bot.bot_activated_at %}
+                                                <small>{{ bot.bot_activated_at.strftime('%Y-%m-%d %H:%M') }} UTC</small>
+                                            {% else %}
+                                                <small class="text-muted">Never</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if bot.bot_last_active %}
+                                                <small>{{ bot.bot_last_active.strftime('%Y-%m-%d %H:%M') }} UTC</small>
+                                            {% else %}
+                                                <small class="text-muted">Never</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                {% if bot.bot_status == 'offline' %}
+                                                    <form method="POST" action="{{ url_for('admin_activate_user_bot', user_id=bot.id) }}" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-success" title="Activate Bot">
+                                                            <i class="fas fa-play"></i>
+                                                        </button>
+                                                    </form>
+                                                {% else %}
+                                                    <form method="POST" action="{{ url_for('admin_deactivate_user_bot', user_id=bot.id) }}" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-danger" title="Deactivate Bot">
+                                                            <i class="fas fa-stop"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                <a href="{{ url_for('admin_user_detail', user_id=bot.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary" title="View User">
+                                                    <i class="fas fa-user"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No customer bots found.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Bot Statistics -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-success">{{ (admin_bots|selectattr('bot_status', 'equalto', 'online')|list|length) + (customer_bots|selectattr('bot_status', 'equalto', 'online')|list|length) }}</h3>
+                            <p class="text-muted">Total Online Bots</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-info">{{ customer_bots|length + admin_bots|length }}</h3>
+                            <p class="text-muted">Total Registered Bots</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="mt-4">
+                <h6>Status Legend:</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <span class="badge badge-success"><i class="fas fa-circle"></i> ONLINE</span> 
+                        - Bot is actively monitoring and creating alerts
+                    </div>
+                    <div class="col-md-6">
+                        <span class="badge badge-secondary"><i class="fas fa-circle"></i> OFFLINE</span> 
+                        - Bot is not active (user deactivated or no subscription)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
