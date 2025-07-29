@@ -642,9 +642,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (data.publicKey) {
             // Register service worker with better error handling
             try {
-                const swRegistration = await navigator.serviceWorker.register('/static/sw.js', {
-                    scope: '/'
-                });
+                const swRegistration = await navigator.serviceWorker.register('/static/sw.js');
                 console.log('Service Worker registered successfully');
                 
                 pushManager = {
@@ -660,7 +658,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateNotificationUI();
             } catch (swError) {
                 console.error('Service Worker registration failed:', swError);
-                document.getElementById('notification-status').textContent = 'Service worker registration failed';
+                // More user-friendly error messages
+                let errorMessage = 'Push notifications unavailable';
+                if (swError.message.includes('not found') || swError.message.includes('404')) {
+                    errorMessage = 'Service configuration issue';
+                } else if (swError.message.includes('secure')) {
+                    errorMessage = 'HTTPS required for notifications';
+                } else {
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        errorMessage = 'Try Chrome or Safari browser';
+                    }
+                }
+                document.getElementById('notification-status').textContent = errorMessage;
                 document.getElementById('notification-status').className = 'status-error';
             }
         } else {
