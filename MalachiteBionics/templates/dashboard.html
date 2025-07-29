@@ -594,10 +594,36 @@ let pushManager = null;
 
 // Initialize notifications when page loads
 document.addEventListener('DOMContentLoaded', async () => {
+    // Debug: Log browser info for troubleshooting
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
+    const isEdge = /Edg/i.test(navigator.userAgent);
+    const hasServiceWorker = 'serviceWorker' in navigator;
+    const hasPushManager = 'PushManager' in window;
+    const hasNotifications = 'Notification' in window;
+    const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
+    
+    console.log('Push Notification Debug Info:', {
+        userAgent: navigator.userAgent,
+        isMobile,
+        isChrome,
+        isEdge,
+        hasServiceWorker,
+        hasPushManager,
+        hasNotifications,
+        isHTTPS,
+        protocol: location.protocol,
+        hostname: location.hostname
+    });
+    
     // Check if we're on HTTPS (required for service workers on mobile)
     if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
         const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
-        if (isChrome) {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isChrome && isMobile) {
+            document.getElementById('notification-status').textContent = 'Chrome mobile needs HTTPS - site must be secure for notifications';
+        } else if (isChrome) {
             document.getElementById('notification-status').textContent = 'Chrome needs HTTPS for notifications - contact support';
         } else {
             document.getElementById('notification-status').textContent = 'HTTPS required for mobile notifications';
@@ -610,8 +636,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!('serviceWorker' in navigator)) {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const isEdge = /Edg/i.test(navigator.userAgent);
+        const isChrome = /Chrome/i.test(navigator.userAgent) && !isEdge;
         
-        if (isMobile) {
+        if (isMobile && isChrome) {
+            document.getElementById('notification-status').textContent = 'Chrome mobile detected - try updating Chrome or check site permissions';
+        } else if (isMobile) {
             document.getElementById('notification-status').textContent = 'Try Chrome, Safari, or Edge for mobile notifications';
         } else if (isEdge) {
             document.getElementById('notification-status').textContent = 'Please update Microsoft Edge to the latest version';
@@ -627,7 +656,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isEdge = /Edg/i.test(navigator.userAgent);
         const isChrome = /Chrome/i.test(navigator.userAgent) && !isEdge;
         
-        if (isMobile) {
+        if (isMobile && isChrome) {
+            document.getElementById('notification-status').textContent = 'Chrome mobile - notifications may be disabled in site settings';
+        } else if (isMobile) {
             document.getElementById('notification-status').textContent = 'Try Chrome, Safari, or Edge for mobile notifications';
         } else if (isEdge) {
             document.getElementById('notification-status').textContent = 'Microsoft Edge detected - notifications may need enabling in settings';
@@ -685,6 +716,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     errorMessage = 'Service configuration issue - contact support';
                 } else if (swError.message.includes('secure') || swError.message.includes('https')) {
                     errorMessage = 'HTTPS required for notifications';
+                } else if (isChrome && isMobile) {
+                    errorMessage = 'Chrome mobile - check Chrome settings > Site Settings > Notifications';
                 } else if (isChrome && !isMobile) {
                     errorMessage = 'Chrome issue - check site permissions in browser settings';
                 } else if (isEdge) {
