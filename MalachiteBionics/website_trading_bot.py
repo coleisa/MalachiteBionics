@@ -121,7 +121,7 @@ class WebsiteTradingBot:
     
     def create_trading_alert(self, user_id: int, coin_pair: str, alert_type: str, 
                            price: float, confidence: int, algorithm: str, message: str):
-        """Create a trading alert in the database (replaces Discord message)"""
+        """Create a trading alert in the database and send push notification"""
         try:
             with self.db_connection.cursor() as cursor:
                 query = """
@@ -138,12 +138,72 @@ class WebsiteTradingBot:
                 self.db_connection.commit()
                 
                 logger.info(f"Created {alert_type} alert for user {user_id}: {coin_pair}")
+                
+                # Send push notification if user has enabled it
+                self.send_push_notification(user_id, coin_pair, alert_type, price, confidence, algorithm)
+                
                 return True
                 
         except Exception as e:
             logger.error(f"Error creating trading alert: {e}")
             self.db_connection.rollback()
             return False
+
+    def send_push_notification(self, user_id: int, coin_pair: str, alert_type: str, 
+                             price: float, confidence: int, algorithm: str):
+        """Send push notification for trading alert"""
+        try:
+            # Get user's push notification subscription
+            with self.db_connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT email, push_notifications_enabled, push_subscription_endpoint,
+                           push_subscription_p256dh, push_subscription_auth
+                    FROM "user" WHERE id = %s AND push_notifications_enabled = true
+                """, (user_id,))
+                
+                user_data = cursor.fetchone()
+                
+                if not user_data:
+                    return  # User doesn't have push notifications enabled
+                
+                # Import push notification service
+                from push_notifications import PushNotificationService
+                push_service = PushNotificationService()
+                
+                # Create user object for push service
+                class UserObj:
+                    def __init__(self, data):
+                        self.email = data['email']
+                        self.push_notifications_enabled = data['push_notifications_enabled']
+                        self.push_subscription_endpoint = data['push_subscription_endpoint']
+                        self.push_subscription_p256dh = data['push_subscription_p256dh']
+                        self.push_subscription_auth = data['push_subscription_auth']
+                
+                user_obj = UserObj(user_data)
+                
+                # Format price and change percentage
+                price_str = f"${price:,.2f}" if price else "N/A"
+                change_str = "N/A"  # You can calculate this from price data if needed
+                
+                # Send push notification
+                result = push_service.send_trading_alert_notification(
+                    user=user_obj,
+                    symbol=coin_pair,
+                    price=price_str,
+                    change=change_str,
+                    algorithm=algorithm,
+                    alert_type=alert_type,
+                    confidence=f"{confidence}%"
+                )
+                
+                if result:
+                    logger.info(f"Push notification sent to user {user_id} for {coin_pair}")
+                else:
+                    logger.warning(f"Failed to send push notification to user {user_id}")
+                    
+        except Exception as e:
+            logger.error(f"Error sending push notification: {e}")
+            # Don't let push notification errors break the alert creation
 
     async def fetch_klines(self, symbol: str, interval: str = "5m", limit: int = 100) -> Optional[pd.DataFrame]:
         """Fetch kline data from Binance API (same as your bot)"""
