@@ -658,7 +658,10 @@ let pushManager = null;
 
 // Initialize notifications when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    // Comprehensive browser and device detection
+    console.log('🔄 Initializing push notifications...');
+    
+    try {
+        // Comprehensive browser and device detection
     const userAgent = navigator.userAgent;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
     const isTablet = /iPad|Android(?!.*Mobile)/i.test(userAgent);
@@ -737,7 +740,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return true; // Assume supported for other browsers
     }
     
-    console.log('Comprehensive Browser Detection:', {
+    console.log('🔍 Browser detection complete:', {
         userAgent,
         device: { isMobile, isTablet, isDesktop },
         browser: { isChrome, isEdge, isFirefox, isSafari, isOpera },
@@ -776,20 +779,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (isWindows) osName = 'Windows';
     else if (isMacOS) osName = 'macOS';
     else if (isLinux) osName = 'Linux';
-    
-    debugInfo.innerHTML = `
-        <div><strong>Device:</strong> ${deviceType} (${osName})</div>
-        <div><strong>Browser:</strong> ${browserName} ${browserVersion ? `v${browserVersion.string}` : ''}</div>
-        <div><strong>Version Supported:</strong> ${isVersionSupported() ? 'Yes' : 'No'}</div>
-        <div><strong>In-App Browser:</strong> ${isInAppBrowser ? 'Yes (Limited Features)' : 'No'}</div>
-        <div><strong>HTTPS:</strong> ${isHTTPS ? 'Yes' : 'No'}</div>
-        <div><strong>Service Worker:</strong> ${hasServiceWorker ? 'Supported' : 'Not Supported'}</div>
-        <div><strong>Push Manager:</strong> ${hasPushManager ? 'Available' : 'Not Available'}</div>
-        <div><strong>Notifications:</strong> ${hasNotifications ? 'Supported' : 'Not Supported'}</div>
-        <div><strong>Permission:</strong> ${hasNotifications ? Notification.permission : 'N/A'}</div>
-        <div><strong>Overall Compatible:</strong> ${compatibility.compatible ? 'Yes' : 'No'}</div>
-        <div class="mt-2"><strong>User Agent:</strong><br><small>${userAgent}</small></div>
-    `;
     
     // Comprehensive compatibility assessment and user guidance
     function getCompatibilityStatus() {
@@ -959,8 +948,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const compatibility = getCompatibilityStatus();
+    console.log('✅ Compatibility check result:', compatibility);
+    
+    // Populate comprehensive debug information
+    debugInfo.innerHTML = `
+        <div><strong>Device:</strong> ${deviceType} (${osName})</div>
+        <div><strong>Browser:</strong> ${browserName} ${browserVersion ? `v${browserVersion.string}` : ''}</div>
+        <div><strong>Version Supported:</strong> ${isVersionSupported() ? 'Yes' : 'No'}</div>
+        <div><strong>In-App Browser:</strong> ${isInAppBrowser ? 'Yes (Limited Features)' : 'No'}</div>
+        <div><strong>HTTPS:</strong> ${isHTTPS ? 'Yes' : 'No'}</div>
+        <div><strong>Service Worker:</strong> ${hasServiceWorker ? 'Supported' : 'Not Supported'}</div>
+        <div><strong>Push Manager:</strong> ${hasPushManager ? 'Available' : 'Not Available'}</div>
+        <div><strong>Notifications:</strong> ${hasNotifications ? 'Supported' : 'Not Supported'}</div>
+        <div><strong>Permission:</strong> ${hasNotifications ? Notification.permission : 'N/A'}</div>
+        <div><strong>Overall Compatible:</strong> ${compatibility.compatible ? 'Yes' : 'No'}</div>
+        <div class="mt-2"><strong>User Agent:</strong><br><small>${userAgent}</small></div>
+    `;
     
     // Update UI based on compatibility
+    console.log('🎯 Updating UI based on compatibility:', compatibility.compatible);
     if (compatibility.compatible) {
         // Everything is compatible, proceed with normal flow
         try {
@@ -1050,6 +1056,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Insert after the debug panel
         const debugPanel = document.getElementById('debug-panel');
         debugPanel.parentNode.insertBefore(solutionPanel, debugPanel.nextSibling);
+    }
+    
+    } catch (initError) {
+        console.error('❌ Initialization failed:', initError);
+        document.getElementById('notification-status').textContent = 'Initialization failed - check console for details';
+        document.getElementById('notification-status').className = 'status-error';
+        document.getElementById('debug-panel').style.display = 'block';
     }
 });
 
