@@ -631,10 +631,30 @@ def make_admin():
                 'message': f'{admin_user.email} is now admin and verified'
             })
         else:
-            return jsonify({
-                'success': False,
-                'message': 'malachitebionics@gmail.com not found - please register first'
-            })
+            # Create the admin user if it doesn't exist
+            try:
+                admin = User(
+                    email='malachitebionics@gmail.com',
+                    display_name='MalachiteBionics Admin',
+                    is_admin=True,
+                    email_verified=True,
+                    is_active=True,
+                    bot_status='offline'
+                )
+                admin.set_password('admin123')  # Default password
+                db.session.add(admin)
+                db.session.commit()
+                return jsonify({
+                    'success': True,
+                    'message': 'Admin account created: malachitebionics@gmail.com (password: admin123)',
+                    'note': 'Please change password after first login'
+                })
+            except Exception as create_error:
+                logger.error(f"Error creating admin user: {create_error}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Failed to create admin user: {str(create_error)}'
+                })
     except Exception as e:
         logger.error(f"Make admin error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
