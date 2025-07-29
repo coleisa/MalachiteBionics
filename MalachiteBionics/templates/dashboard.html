@@ -102,7 +102,7 @@
                                     {% elif subscription.plan_type in ['advanced', 'v9'] %}
                                         ADVANCED Trading Algorithm
                                     {% elif subscription.plan_type in ['premium', 'elite', 'v12'] %}
-                                        PREMIUM Trading Algorithm
+                                        ELITE Trading Algorithm
                                     {% else %}
                                         {{ subscription.plan_type.upper() }} Trading Algorithm
                                     {% endif %}
@@ -275,7 +275,7 @@
                                         {% elif subscription.plan_type in ['advanced', 'v9'] %}
                                             <span class="badge bg-warning">ADVANCED</span>
                                         {% elif subscription.plan_type in ['premium', 'elite', 'v12'] %}
-                                            <span class="badge bg-danger">PREMIUM</span>
+                                            <span class="badge bg-danger">ELITE</span>
                                         {% else %}
                                             <span class="badge bg-secondary">{{ subscription.plan_type.upper() }}</span>
                                         {% endif %}
@@ -606,21 +606,28 @@ let pushManager = null;
 
 // Initialize notifications when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check browser support first
+    // Check if we're on HTTPS (required for service workers on mobile)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        document.getElementById('notification-status').textContent = 'HTTPS required for mobile notifications';
+        document.getElementById('notification-status').className = 'status-error';
+        return;
+    }
+    
+    // Check browser support
     if (!('serviceWorker' in navigator)) {
-        document.getElementById('notification-status').textContent = 'Service workers not supported';
+        document.getElementById('notification-status').textContent = 'Please update your browser for notification support';
         document.getElementById('notification-status').className = 'status-error';
         return;
     }
     
     if (!('PushManager' in window)) {
-        document.getElementById('notification-status').textContent = 'Push notifications not supported';
+        document.getElementById('notification-status').textContent = 'Push notifications not available on this device';
         document.getElementById('notification-status').className = 'status-error';
         return;
     }
     
     if (!('Notification' in window)) {
-        document.getElementById('notification-status').textContent = 'Notifications not supported';
+        document.getElementById('notification-status').textContent = 'Browser notifications not supported';
         document.getElementById('notification-status').className = 'status-error';
         return;
     }
@@ -629,34 +636,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Get VAPID public key from server
         const response = await fetch('/api/push/vapid-public-key');
         if (!response.ok) {
-            throw new Error('Failed to get VAPID key');
+            throw new Error('Server connection failed');
         }
         
         const data = await response.json();
         
         if (data.publicKey) {
-            // Register service worker
-            const swRegistration = await navigator.serviceWorker.register('/static/sw.js');
-            console.log('Service Worker registered successfully');
-            
-            pushManager = {
-                swRegistration: swRegistration,
-                publicKey: data.publicKey,
-                isSubscribed: false
-            };
-            
-            // Check current subscription status
-            const subscription = await swRegistration.pushManager.getSubscription();
-            pushManager.isSubscribed = !(subscription === null);
-            
-            updateNotificationUI();
+            // Register service worker with better error handling
+            try {
+                const swRegistration = await navigator.serviceWorker.register('/static/sw.js', {
+                    scope: '/'
+                });
+                console.log('Service Worker registered successfully');
+                
+                pushManager = {
+                    swRegistration: swRegistration,
+                    publicKey: data.publicKey,
+                    isSubscribed: false
+                };
+                
+                // Check current subscription status
+                const subscription = await swRegistration.pushManager.getSubscription();
+                pushManager.isSubscribed = !(subscription === null);
+                
+                updateNotificationUI();
+            } catch (swError) {
+                console.error('Service Worker registration failed:', swError);
+                document.getElementById('notification-status').textContent = 'Service worker registration failed';
+                document.getElementById('notification-status').className = 'status-error';
+            }
         } else {
             document.getElementById('notification-status').textContent = 'Server configuration error';
             document.getElementById('notification-status').className = 'status-error';
         }
     } catch (error) {
         console.error('Failed to initialize notifications:', error);
-        document.getElementById('notification-status').textContent = 'Initialization failed: ' + error.message;
+        document.getElementById('notification-status').textContent = 'Connection error: ' + error.message;
         document.getElementById('notification-status').className = 'status-error';
     }
 });
