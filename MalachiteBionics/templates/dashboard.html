@@ -596,7 +596,12 @@ let pushManager = null;
 document.addEventListener('DOMContentLoaded', async () => {
     // Check if we're on HTTPS (required for service workers on mobile)
     if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        document.getElementById('notification-status').textContent = 'HTTPS required for mobile notifications';
+        const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
+        if (isChrome) {
+            document.getElementById('notification-status').textContent = 'Chrome needs HTTPS for notifications - contact support';
+        } else {
+            document.getElementById('notification-status').textContent = 'HTTPS required for mobile notifications';
+        }
         document.getElementById('notification-status').className = 'status-error';
         return;
     }
@@ -604,10 +609,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check browser support with better mobile detection
     if (!('serviceWorker' in navigator)) {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isEdge = /Edg/i.test(navigator.userAgent);
+        
         if (isMobile) {
-            document.getElementById('notification-status').textContent = 'Mobile notifications available in Chrome/Safari';
+            document.getElementById('notification-status').textContent = 'Try Chrome, Safari, or Edge for mobile notifications';
+        } else if (isEdge) {
+            document.getElementById('notification-status').textContent = 'Please update Microsoft Edge to the latest version';
         } else {
-            document.getElementById('notification-status').textContent = 'Please update your browser for notification support';
+            document.getElementById('notification-status').textContent = 'Please use Chrome, Firefox, Safari, or Edge browser';
         }
         document.getElementById('notification-status').className = 'status-error';
         return;
@@ -615,10 +624,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (!('PushManager' in window)) {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isEdge = /Edg/i.test(navigator.userAgent);
+        const isChrome = /Chrome/i.test(navigator.userAgent) && !isEdge;
+        
         if (isMobile) {
-            document.getElementById('notification-status').textContent = 'Try Chrome or Safari for mobile notifications';
+            document.getElementById('notification-status').textContent = 'Try Chrome, Safari, or Edge for mobile notifications';
+        } else if (isEdge) {
+            document.getElementById('notification-status').textContent = 'Microsoft Edge detected - notifications may need enabling in settings';
+        } else if (isChrome) {
+            document.getElementById('notification-status').textContent = 'Chrome detected but notifications unavailable - check site permissions';
         } else {
-            document.getElementById('notification-status').textContent = 'Push notifications not available on this device';
+            document.getElementById('notification-status').textContent = 'Push notifications not available - try Chrome, Firefox, Safari, or Edge';
         }
         document.getElementById('notification-status').className = 'status-error';
         return;
@@ -658,18 +674,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateNotificationUI();
             } catch (swError) {
                 console.error('Service Worker registration failed:', swError);
-                // More user-friendly error messages
+                // More user-friendly error messages with browser-specific help
+                const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
+                const isEdge = /Edg/i.test(navigator.userAgent);
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
                 let errorMessage = 'Push notifications unavailable';
+                
                 if (swError.message.includes('not found') || swError.message.includes('404')) {
-                    errorMessage = 'Service configuration issue';
-                } else if (swError.message.includes('secure')) {
+                    errorMessage = 'Service configuration issue - contact support';
+                } else if (swError.message.includes('secure') || swError.message.includes('https')) {
                     errorMessage = 'HTTPS required for notifications';
+                } else if (isChrome && !isMobile) {
+                    errorMessage = 'Chrome issue - check site permissions in browser settings';
+                } else if (isEdge) {
+                    errorMessage = 'Edge detected - try enabling notifications in browser settings';
+                } else if (isMobile) {
+                    errorMessage = 'Try Chrome, Safari, or Edge browser';
                 } else {
-                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                    if (isMobile) {
-                        errorMessage = 'Try Chrome or Safari browser';
-                    }
+                    errorMessage = 'Browser issue - try Chrome, Firefox, Safari, or Edge';
                 }
+                
                 document.getElementById('notification-status').textContent = errorMessage;
                 document.getElementById('notification-status').className = 'status-error';
             }
