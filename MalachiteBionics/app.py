@@ -106,6 +106,11 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
     
+    # Bot status fields for individual user bots
+    bot_status = db.Column(db.String(20), default='offline')  # 'online', 'offline'
+    bot_last_active = db.Column(db.DateTime)
+    bot_activated_at = db.Column(db.DateTime)
+    
     # Subscription relationship
     subscriptions = db.relationship('Subscription', backref='user', lazy=True)
     
@@ -147,6 +152,37 @@ class User(UserMixin, db.Model):
             user_id=self.id,
             status='active'
         ).first()
+    
+    def activate_bot(self):
+        """Activate user's trading bot"""
+        self.bot_status = 'online'
+        self.bot_activated_at = datetime.utcnow()
+        self.bot_last_active = datetime.utcnow()
+        db.session.commit()
+        return True
+    
+    def deactivate_bot(self):
+        """Deactivate user's trading bot"""
+        self.bot_status = 'offline'
+        db.session.commit()
+        return True
+    
+    def update_bot_activity(self):
+        """Update bot last active timestamp"""
+        if self.bot_status == 'online':
+            self.bot_last_active = datetime.utcnow()
+            db.session.commit()
+    
+    def get_bot_algorithm(self):
+        """Get the algorithm type for this user"""
+        if self.is_admin:
+            return 'free'  # Admin gets free version
+        
+        subscription = self.get_active_subscription()
+        if subscription and subscription.status == 'active':
+            return subscription.plan_type
+        
+        return None  # No active subscription
 
 # Subscription model
 class Subscription(db.Model):
@@ -841,6 +877,89 @@ def dashboard():
                          subscription=subscription,
                          recent_alerts=recent_alerts,
                          unread_count=unread_count)
+
+@app.route('/bot/activate', methods=['POST'])
+@login_required
+def activate_bot():
+    """Activate user's trading bot (Admin only)"""
+    try:
+        # Only admins can control bots
+        if not current_user.is_admin:
+            flash('Access denied. Only administrators can control trading bots.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        if current_user.activate_bot():
+            flash('Admin trading bot activated successfully! 🤖', 'success')
+        else:
+            flash('Failed to activate trading bot.', 'error')
+            
+    except Exception as e:
+        logger.error(f"Bot activation error for user {current_user.id}: {e}")
+        flash('Error activating trading bot.', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/bot/deactivate', methods=['POST'])
+@login_required  
+def deactivate_bot():
+    """Deactivate user's trading bot (Admin only)"""
+    try:
+        # Only admins can control bots
+        if not current_user.is_admin:
+            flash('Access denied. Only administrators can control trading bots.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        if current_user.deactivate_bot():
+            flash('Admin trading bot deactivated successfully.', 'info')
+        else:
+            flash('Failed to deactivate trading bot.', 'error')
+            
+    except Exception as e:
+        logger.error(f"Bot deactivation error for user {current_user.id}: {e}")
+        flash('Error deactivating trading bot.', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/bot/activate/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_activate_user_bot(user_id):
+    """Admin activates a customer's trading bot"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Check if user has active subscription or is admin
+        if not user.is_admin and not user.get_active_subscription():
+            flash(f'User {user.email} needs an active subscription to activate their bot.', 'error')
+            return redirect(url_for('admin_bot_status'))
+        
+        if user.activate_bot():
+            flash(f'Successfully activated trading bot for {user.email}! 🤖', 'success')
+        else:
+            flash(f'Failed to activate trading bot for {user.email}.', 'error')
+            
+    except Exception as e:
+        logger.error(f"Admin bot activation error for user {user_id}: {e}")
+        flash('Error activating user trading bot.', 'error')
+    
+    return redirect(url_for('admin_bot_status'))
+
+@app.route('/admin/bot/deactivate/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_deactivate_user_bot(user_id):
+    """Admin deactivates a customer's trading bot"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        if user.deactivate_bot():
+            flash(f'Successfully deactivated trading bot for {user.email}.', 'info')
+        else:
+            flash(f'Failed to deactivate trading bot for {user.email}.', 'error')
+            
+    except Exception as e:
+        logger.error(f"Admin bot deactivation error for user {user_id}: {e}")
+        flash('Error deactivating user trading bot.', 'error')
+    
+    return redirect(url_for('admin_bot_status'))
 
 @app.route('/alerts')
 @login_required
@@ -1538,6 +1657,63 @@ def admin_alerts():
         flash('Error loading alerts.', 'error')
         return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/bot-status')
+@admin_required
+def admin_bot_status():
+    """View all user bot statuses"""
+    try:
+        # Get all users with their bot status and subscription info
+        users = db.session.query(User).outerjoin(Subscription).filter(
+            Subscription.status == 'active'
+        ).add_columns(
+            User.id,
+            User.email,
+            User.display_name,
+            User.is_admin,
+            User.bot_status,
+            User.bot_last_active,
+            User.bot_activated_at,
+            Subscription.plan_type,
+            Subscription.coins
+        ).all()
+        
+        # Separate admin and customer bots
+        admin_bots = []
+        customer_bots = []
+        
+        for user_data in users:
+            user_info = {
+                'id': user_data.id,
+                'email': user_data.email,
+                'display_name': user_data.display_name,
+                'bot_status': user_data.bot_status,
+                'bot_last_active': user_data.bot_last_active,
+                'bot_activated_at': user_data.bot_activated_at,
+                'plan_type': user_data.plan_type if not user_data.is_admin else 'free',
+                'coins': []
+            }
+            
+            if user_data.is_admin:
+                user_info['coins'] = ['SOL', 'RAY']  # Admin's default coins
+                admin_bots.append(user_info)
+            else:
+                try:
+                    if user_data.coins:
+                        user_info['coins'] = json.loads(user_data.coins)
+                    customer_bots.append(user_info)
+                except json.JSONDecodeError:
+                    user_info['coins'] = []
+                    customer_bots.append(user_info)
+        
+        return render_template('admin/bot_status.html', 
+                             admin_bots=admin_bots,
+                             customer_bots=customer_bots)
+        
+    except Exception as e:
+        logger.error(f"Admin bot status error: {e}")
+        flash('Error loading bot statuses.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/alerts/create', methods=['GET', 'POST'])
 @admin_required
 def admin_create_alert():
@@ -1732,6 +1908,15 @@ def internal_error(error):
 
 if __name__ == '__main__':
     try:
+        # Start the trading bot as a background service
+        try:
+            from start_bot_service import start_trading_bot
+            start_trading_bot()
+            logger.info("🤖 Trading bot started successfully")
+        except Exception as bot_error:
+            logger.error(f"Failed to start trading bot: {bot_error}")
+            # Continue running Flask app even if bot fails to start
+        
         # Database tables are already created by create_tables() function above
         app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
     except Exception as e:
