@@ -786,9 +786,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Check browser compatibility
-        if (!hasServiceWorker || !hasPushManager) {
-            if (isSafari && isIOS) {
-                if (!isVersionSupported()) {
+        if (!hasServiceWorker || !hasPushManager || !hasNotifications) {
+            if (isSafari) {
+                if (isIOS && !isVersionSupported()) {
                     return {
                         compatible: false,
                         reason: 'safari-version',
@@ -799,11 +799,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     return {
                         compatible: false,
-                        reason: 'safari-setup',
-                        message: 'Safari needs special setup for notifications',
-                        solution: 'Add this site to your Home Screen for full notification support',
-                        canFix: true,
-                        showSafariInstructions: true
+                        reason: 'safari-settings',
+                        message: 'Safari notifications may be disabled',
+                        solution: 'Check Safari Settings > Websites > Notifications and allow this site',
+                        canFix: true
                     };
                 }
             } else if (isChrome) {
@@ -871,17 +870,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         
-        // Check Notification API
-        if (!hasNotifications) {
-            return {
-                compatible: false,
-                reason: 'notification-api',
-                message: 'Browser notification API is not available',
-                solution: 'Update your browser to the latest version',
-                canFix: true
-            };
-        }
-        
         // All checks passed
         return {
             compatible: true,
@@ -939,12 +927,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('notification-status').className = 'status-error';
         
         // Show appropriate instruction panels
-        if (compatibility.showInstructions || compatibility.showSafariInstructions) {
-            if (compatibility.showSafariInstructions && isSafari && isIOS) {
-                document.getElementById('safari-instructions').style.display = 'block';
-            } else {
-                document.getElementById('browser-instructions').style.display = 'block';
-            }
+        if (compatibility.showInstructions) {
+            document.getElementById('browser-instructions').style.display = 'block';
         }
         
         // Create solution panel
