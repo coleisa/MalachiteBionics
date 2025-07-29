@@ -162,6 +162,23 @@ class Subscription(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+# Trading Alert model for website-based alerts
+class TradingAlert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    coin_pair = db.Column(db.String(20), nullable=False)  # e.g., BTC/USD, ETH/USD
+    alert_type = db.Column(db.String(20), nullable=False)  # buy, sell, hold
+    price = db.Column(db.Float, nullable=False)
+    confidence = db.Column(db.Integer, default=85)  # Confidence percentage
+    algorithm = db.Column(db.String(20), nullable=False)  # v3, v6, v9, elite
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime)  # When the alert expires
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('alerts', lazy=True))
+
 @login_manager.user_loader
 def load_user(user_uuid):
     """Load user by UUID instead of ID for better session persistence"""
@@ -198,8 +215,8 @@ def create_tables():
             tables = inspector.get_table_names()
             logger.info(f"Available tables: {tables}")
             
-            if 'user' not in tables:
-                logger.error("User table was not created - forcing recreation")
+            if 'user' not in tables or 'trading_alert' not in tables:
+                logger.error("Required tables were not created - forcing recreation")
                 db.drop_all()
                 db.create_all()
                 
@@ -809,7 +826,101 @@ def resend_verification():
 @login_required
 def dashboard():
     subscription = current_user.get_active_subscription()
-    return render_template('dashboard.html', user=current_user, subscription=subscription)
+    
+    # Get recent alerts for the user (last 24 hours)
+    recent_alerts = TradingAlert.query.filter_by(user_id=current_user.id)\
+        .filter(TradingAlert.created_at >= datetime.utcnow() - timedelta(hours=24))\
+        .order_by(TradingAlert.created_at.desc())\
+        .limit(10).all()
+    
+    # Get unread alert count
+    unread_count = TradingAlert.query.filter_by(user_id=current_user.id, is_read=False).count()
+    
+    return render_template('dashboard.html', 
+                         user=current_user, 
+                         subscription=subscription,
+                         recent_alerts=recent_alerts,
+                         unread_count=unread_count)
+
+@app.route('/alerts')
+@login_required
+def view_alerts():
+    """View all trading alerts for the current user"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    alerts = TradingAlert.query.filter_by(user_id=current_user.id)\
+        .order_by(TradingAlert.created_at.desc())\
+        .paginate(page=page, per_page=per_page, error_out=False)
+    
+    return render_template('alerts.html', alerts=alerts)
+
+@app.route('/alerts/mark-read/<int:alert_id>', methods=['POST'])
+@login_required
+def mark_alert_read(alert_id):
+    """Mark a specific alert as read"""
+    alert = TradingAlert.query.filter_by(id=alert_id, user_id=current_user.id).first_or_404()
+    alert.is_read = True
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/alerts/mark-all-read', methods=['POST'])
+@login_required
+def mark_all_alerts_read():
+    """Mark all alerts as read for the current user"""
+    TradingAlert.query.filter_by(user_id=current_user.id, is_read=False)\
+        .update({'is_read': True})
+    db.session.commit()
+    flash('All alerts marked as read.', 'success')
+    return redirect(url_for('view_alerts'))
+
+@app.route('/api/alerts/recent')
+@login_required
+def get_recent_alerts():
+    """API endpoint to get recent alerts (for live updates)"""
+    alerts = TradingAlert.query.filter_by(user_id=current_user.id)\
+        .filter(TradingAlert.created_at >= datetime.utcnow() - timedelta(hours=1))\
+        .order_by(TradingAlert.created_at.desc())\
+        .limit(5).all()
+    
+    alert_data = []
+    for alert in alerts:
+        alert_data.append({
+            'id': alert.id,
+            'coin_pair': alert.coin_pair,
+            'alert_type': alert.alert_type,
+            'price': alert.price,
+            'confidence': alert.confidence,
+            'algorithm': alert.algorithm,
+            'message': alert.message,
+            'is_read': alert.is_read,
+            'created_at': alert.created_at.isoformat(),
+            'time_ago': get_time_ago(alert.created_at)
+        })
+    
+    unread_count = TradingAlert.query.filter_by(user_id=current_user.id, is_read=False).count()
+    
+    return jsonify({
+        'alerts': alert_data,
+        'unread_count': unread_count
+    })
+
+def get_time_ago(timestamp):
+    """Helper function to get human-readable time difference"""
+    now = datetime.utcnow()
+    diff = now - timestamp
+    
+    if diff.seconds < 60:
+        return "Just now"
+    elif diff.seconds < 3600:
+        minutes = diff.seconds // 60
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    elif diff.seconds < 86400:
+        hours = diff.seconds // 3600
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    else:
+        days = diff.days
+        return f"{days} day{'s' if days != 1 else ''} ago"
 
 @app.route('/subscribe/<plan_type>')
 @login_required
@@ -1217,6 +1328,13 @@ def admin_dashboard():
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         recent_users = User.query.filter(User.created_at >= thirty_days_ago).count()
         
+        # Get alert statistics
+        total_alerts = TradingAlert.query.count()
+        alerts_today = TradingAlert.query.filter(
+            TradingAlert.created_at >= datetime.utcnow().replace(hour=0, minute=0, second=0)
+        ).count()
+        unread_alerts = TradingAlert.query.filter_by(is_read=False).count()
+        
         stats = {
             'total_users': total_users,
             'active_users': active_users,
@@ -1224,7 +1342,10 @@ def admin_dashboard():
             'admin_users': admin_users,
             'active_subscriptions': active_subscriptions,
             'total_subscriptions': total_subscriptions,
-            'recent_users': recent_users
+            'recent_users': recent_users,
+            'total_alerts': total_alerts,
+            'alerts_today': alerts_today,
+            'unread_alerts': unread_alerts
         }
         
         return render_template('admin/dashboard.html', users=users, stats=stats)
@@ -1309,9 +1430,21 @@ def admin_update_user_subscription(user_id):
         coins = request.form.getlist('coins')  # Get list of selected coins
         
         # Validate plan type
-        valid_plans = ['v3', 'v6', 'v9', 'elite']
+        valid_plans = ['v3', 'v6', 'v9', 'elite', 'none']
         if plan_type not in valid_plans:
             flash('Invalid plan type selected.', 'error')
+            return redirect(url_for('admin_user_detail', user_id=user_id))
+        
+        # Handle subscription removal
+        if plan_type == 'none':
+            # Remove/cancel all active subscriptions for this user
+            active_subscriptions = Subscription.query.filter_by(user_id=user_id, status='active').all()
+            for subscription in active_subscriptions:
+                subscription.status = 'cancelled'
+                subscription.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            flash(f'All subscriptions removed for {user.email}.', 'success')
             return redirect(url_for('admin_user_detail', user_id=user_id))
         
         # Validate coin selection (max 2 for non-elite plans)
@@ -1372,6 +1505,143 @@ def admin_delete_user(user_id):
         logger.error(f"Admin delete user error: {e}")
         flash('Error deleting user.', 'error')
         return redirect(url_for('admin_user_detail', user_id=user_id))
+
+@app.route('/admin/alerts')
+@admin_required
+def admin_alerts():
+    """Admin view for managing all trading alerts"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = 50
+        
+        alerts = TradingAlert.query.join(User)\
+            .order_by(TradingAlert.created_at.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+        
+        # Get alert statistics
+        total_alerts = TradingAlert.query.count()
+        alerts_today = TradingAlert.query.filter(
+            TradingAlert.created_at >= datetime.utcnow().replace(hour=0, minute=0, second=0)
+        ).count()
+        unread_alerts = TradingAlert.query.filter_by(is_read=False).count()
+        
+        stats = {
+            'total_alerts': total_alerts,
+            'alerts_today': alerts_today,
+            'unread_alerts': unread_alerts
+        }
+        
+        return render_template('admin/alerts.html', alerts=alerts, stats=stats)
+        
+    except Exception as e:
+        logger.error(f"Admin alerts error: {e}")
+        flash('Error loading alerts.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/alerts/create', methods=['GET', 'POST'])
+@admin_required
+def admin_create_alert():
+    """Create a new trading alert"""
+    if request.method == 'POST':
+        try:
+            user_id = request.form.get('user_id')
+            coin_pair = request.form.get('coin_pair')
+            alert_type = request.form.get('alert_type')
+            price = float(request.form.get('price', 0))
+            confidence = int(request.form.get('confidence', 85))
+            algorithm = request.form.get('algorithm')
+            message = request.form.get('message')
+            expires_hours = int(request.form.get('expires_hours', 24))
+            
+            # Validation
+            if not all([user_id, coin_pair, alert_type, algorithm, message]):
+                flash('All fields are required.', 'error')
+                return render_template('admin/create_alert.html')
+            
+            if alert_type not in ['buy', 'sell', 'hold']:
+                flash('Invalid alert type.', 'error')
+                return render_template('admin/create_alert.html')
+            
+            # Create alert
+            alert = TradingAlert(
+                user_id=user_id,
+                coin_pair=coin_pair.upper(),
+                alert_type=alert_type,
+                price=price,
+                confidence=confidence,
+                algorithm=algorithm,
+                message=message,
+                expires_at=datetime.utcnow() + timedelta(hours=expires_hours)
+            )
+            
+            db.session.add(alert)
+            db.session.commit()
+            
+            flash(f'Alert created successfully for {coin_pair}!', 'success')
+            return redirect(url_for('admin_alerts'))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Create alert error: {e}")
+            flash('Error creating alert.', 'error')
+    
+    # Get all active users for the dropdown
+    users = User.query.filter_by(is_active=True).order_by(User.email).all()
+    return render_template('admin/create_alert.html', users=users)
+
+@app.route('/admin/alerts/broadcast', methods=['GET', 'POST'])
+@admin_required
+def admin_broadcast_alert():
+    """Broadcast an alert to all active subscribers"""
+    if request.method == 'POST':
+        try:
+            coin_pair = request.form.get('coin_pair')
+            alert_type = request.form.get('alert_type')
+            price = float(request.form.get('price', 0))
+            confidence = int(request.form.get('confidence', 85))
+            algorithm = request.form.get('algorithm')
+            message = request.form.get('message')
+            expires_hours = int(request.form.get('expires_hours', 24))
+            plan_filter = request.form.get('plan_filter', 'all')
+            
+            # Get users based on plan filter
+            if plan_filter == 'all':
+                users = User.query.join(Subscription)\
+                    .filter(Subscription.status == 'active')\
+                    .filter(User.is_active == True).all()
+            else:
+                users = User.query.join(Subscription)\
+                    .filter(Subscription.status == 'active')\
+                    .filter(Subscription.plan_type == plan_filter)\
+                    .filter(User.is_active == True).all()
+            
+            # Create alerts for all matching users
+            alert_count = 0
+            for user in users:
+                alert = TradingAlert(
+                    user_id=user.id,
+                    coin_pair=coin_pair.upper(),
+                    alert_type=alert_type,
+                    price=price,
+                    confidence=confidence,
+                    algorithm=algorithm,
+                    message=message,
+                    expires_at=datetime.utcnow() + timedelta(hours=expires_hours)
+                )
+                db.session.add(alert)
+                alert_count += 1
+            
+            db.session.commit()
+            
+            flash(f'Alert broadcasted to {alert_count} users!', 'success')
+            return redirect(url_for('admin_alerts'))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Broadcast alert error: {e}")
+            flash('Error broadcasting alert.', 'error')
+    
+    return render_template('admin/broadcast_alert.html')
 
 @app.route('/admin/user/<int:user_id>/send-welcome', methods=['POST'])
 @admin_required
