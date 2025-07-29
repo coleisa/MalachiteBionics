@@ -209,7 +209,7 @@ class Subscription(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     stripe_subscription_id = db.Column(db.String(100), unique=True)
     stripe_customer_id = db.Column(db.String(100))
-    plan_type = db.Column(db.String(20), nullable=False)  # v3, v6, v9
+    plan_type = db.Column(db.String(20), nullable=False)  # v3, v6, v9, elite/v12
     coins = db.Column(db.Text)  # JSON string of selected coins
     status = db.Column(db.String(20), default='inactive')  # active, inactive, cancelled
     current_period_start = db.Column(db.DateTime)
@@ -225,7 +225,7 @@ class TradingAlert(db.Model):
     alert_type = db.Column(db.String(20), nullable=False)  # buy, sell, hold
     price = db.Column(db.Float, nullable=False)
     confidence = db.Column(db.Integer, default=85)  # Confidence percentage
-    algorithm = db.Column(db.String(20), nullable=False)  # v3, v6, v9, elite
+    algorithm = db.Column(db.String(20), nullable=False)  # v3, v6, v9, elite/v12
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -364,7 +364,7 @@ def send_welcome_email(user):
                     <h3 style="color: #000; font-size: 18px; margin-bottom: 15px;">🎯 What's Next?</h3>
                     <div style="background: white; border-left: 4px solid #22c55e; padding: 15px; margin-bottom: 15px;">
                         <h4 style="color: #22c55e; font-size: 16px; margin-bottom: 8px;">1. Choose Your Algorithm</h4>
-                        <p style="color: #666; margin: 0; font-size: 14px;">Select from Basic, Classic, Premium, or our upcoming Elite algorithm</p>
+                        <p style="color: #666; margin: 0; font-size: 14px;">Select from Basic, Classic, Advanced, or Elite algorithm packages</p>
                     </div>
                     <div style="background: white; border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 15px;">
                         <h4 style="color: #3b82f6; font-size: 16px; margin-bottom: 8px;">2. Pick Your Cryptocurrencies</h4>
@@ -671,7 +671,12 @@ def make_admin():
 
 @app.route('/pricing')
 def pricing():
-    return render_template('pricing.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
+    try:
+        stripe_key = STRIPE_PUBLISHABLE_KEY or 'pk_test_fallback'
+        return render_template('pricing.html', stripe_publishable_key=stripe_key)
+    except Exception as e:
+        logger.error(f"Pricing page error: {e}")
+        return render_template('pricing.html', stripe_publishable_key='pk_test_fallback')
 
 @app.route('/help')
 def help_page():
