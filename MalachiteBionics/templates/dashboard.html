@@ -86,9 +86,10 @@
 <section class="py-5">
     <div class="container">
         <div class="row g-4">
-            <!-- Subscription Status Card -->
-            <div class="col-lg-8">
-                <div class="dashboard-card">
+            <!-- Left Column -->
+            <div class="col-lg-6">
+                <!-- Subscription Status Card -->
+                <div class="dashboard-card mb-4">
                     {% if subscription %}
                         <div class="d-flex align-items-center justify-content-between mb-4">
                             <div>
@@ -238,7 +239,7 @@
                     </h3>
                     
                     <div class="row align-items-center mb-4">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6 mb-3 mb-md-0">
                             <div class="d-flex align-items-center">
                                 <div class="me-3">
                                     {% if user.bot_status == 'online' %}
@@ -257,26 +258,31 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="text-md-end">
-                                <h6 class="fw-semibold mb-1">Algorithm</h6>
-                                {% if user.is_admin %}
-                                    <span class="badge bg-primary">FREE</span>
-                                {% elif subscription %}
-                                    {% if subscription.plan_type in ['basic', 'v3'] %}
-                                        <span class="badge bg-info">BASIC</span>
-                                    {% elif subscription.plan_type in ['classic', 'v6'] %}
-                                        <span class="badge bg-success">CLASSIC</span>
-                                    {% elif subscription.plan_type in ['advanced', 'v9'] %}
-                                        <span class="badge bg-warning">ADVANCED</span>
-                                    {% elif subscription.plan_type in ['premium', 'elite', 'v12'] %}
-                                        <span class="badge bg-danger">PREMIUM</span>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="status-indicator" style="background-color: #3b82f6;"></div>
+                                </div>
+                                <div>
+                                    <h6 class="fw-semibold mb-1">Algorithm</h6>
+                                    {% if user.is_admin %}
+                                        <span class="badge bg-primary">FREE</span>
+                                    {% elif subscription %}
+                                        {% if subscription.plan_type in ['basic', 'v3'] %}
+                                            <span class="badge bg-info">BASIC</span>
+                                        {% elif subscription.plan_type in ['classic', 'v6'] %}
+                                            <span class="badge bg-success">CLASSIC</span>
+                                        {% elif subscription.plan_type in ['advanced', 'v9'] %}
+                                            <span class="badge bg-warning">ADVANCED</span>
+                                        {% elif subscription.plan_type in ['premium', 'elite', 'v12'] %}
+                                            <span class="badge bg-danger">PREMIUM</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ subscription.plan_type.upper() }}</span>
+                                        {% endif %}
                                     {% else %}
-                                        <span class="badge bg-secondary">{{ subscription.plan_type.upper() }}</span>
+                                        <span class="badge bg-warning">NO PLAN</span>
                                     {% endif %}
-                                {% else %}
-                                    <span class="badge bg-warning">NO PLAN</span>
-                                {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -339,9 +345,10 @@
                 </div>
             </div>
             
-            <!-- Mobile Push Notifications -->
-            <div class="col-md-6 mb-4">
-                <div class="card h-100">
+            <!-- Right Column -->
+            <div class="col-lg-6">
+                <!-- Mobile Push Notifications -->
+                <div class="card mb-4">
                     <div class="card-body">
                         <h5 class="card-title mb-3">
                             <i class="fas fa-mobile-alt me-2" style="color: #3b82f6;"></i>
@@ -383,10 +390,62 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Account Information -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-user me-2"></i>
+                            Account Information
+                        </h5>
+                        <div class="mb-3">
+                            <label class="small text-muted">Email</label>
+                            <div class="fw-medium">{{ user.email }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-muted">Member Since</label>
+                            <div class="fw-medium">{{ user.created_at.strftime('%B %Y') }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-muted">Account Type</label>
+                            <div class="fw-medium">
+                                {% if user.is_admin %}
+                                    <i class="fas fa-crown me-2" style="color: #f59e0b;"></i>Administrator
+                                {% else %}
+                                    <i class="fas fa-user me-2"></i>Standard User
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Quick Stats
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
+                                    <div class="h5 fw-bold mb-1" style="color: #3b82f6;">{{ recent_alerts|length }}</div>
+                                    <small class="text-muted">Today's Alerts</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
+                                    <div class="h5 fw-bold mb-1" style="color: #22c55e;">{{ unread_count }}</div>
+                                    <small class="text-muted">Unread</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <!-- Quick Actions & Stats -->
-            <div class="col-lg-4">
+        </div>
+    </div>
+</section>
                 <!-- Account Info -->
                 <div class="dashboard-card mb-4">
                     <h5 class="fw-semibold mb-3">
@@ -547,34 +606,57 @@ let pushManager = null;
 
 // Initialize notifications when page loads
 document.addEventListener('DOMContentLoaded', async () => {
+    // Check browser support first
+    if (!('serviceWorker' in navigator)) {
+        document.getElementById('notification-status').textContent = 'Service workers not supported';
+        document.getElementById('notification-status').className = 'status-error';
+        return;
+    }
+    
+    if (!('PushManager' in window)) {
+        document.getElementById('notification-status').textContent = 'Push notifications not supported';
+        document.getElementById('notification-status').className = 'status-error';
+        return;
+    }
+    
+    if (!('Notification' in window)) {
+        document.getElementById('notification-status').textContent = 'Notifications not supported';
+        document.getElementById('notification-status').className = 'status-error';
+        return;
+    }
+    
     try {
+        // Get VAPID public key from server
         const response = await fetch('/api/push/vapid-public-key');
+        if (!response.ok) {
+            throw new Error('Failed to get VAPID key');
+        }
+        
         const data = await response.json();
         
         if (data.publicKey) {
-            // Initialize push manager
-            if ('serviceWorker' in navigator && 'PushManager' in window) {
-                const swRegistration = await navigator.serviceWorker.register('/static/sw.js');
-                
-                pushManager = {
-                    swRegistration: swRegistration,
-                    publicKey: data.publicKey,
-                    isSubscribed: false
-                };
-                
-                // Check current subscription status
-                const subscription = await swRegistration.pushManager.getSubscription();
-                pushManager.isSubscribed = !(subscription === null);
-                
-                updateNotificationUI();
-            } else {
-                document.getElementById('notification-status').textContent = 'Push notifications not supported on this browser';
-                document.getElementById('notification-status').className = 'status-error';
-            }
+            // Register service worker
+            const swRegistration = await navigator.serviceWorker.register('/static/sw.js');
+            console.log('Service Worker registered successfully');
+            
+            pushManager = {
+                swRegistration: swRegistration,
+                publicKey: data.publicKey,
+                isSubscribed: false
+            };
+            
+            // Check current subscription status
+            const subscription = await swRegistration.pushManager.getSubscription();
+            pushManager.isSubscribed = !(subscription === null);
+            
+            updateNotificationUI();
+        } else {
+            document.getElementById('notification-status').textContent = 'Server configuration error';
+            document.getElementById('notification-status').className = 'status-error';
         }
     } catch (error) {
         console.error('Failed to initialize notifications:', error);
-        document.getElementById('notification-status').textContent = 'Failed to initialize notifications';
+        document.getElementById('notification-status').textContent = 'Initialization failed: ' + error.message;
         document.getElementById('notification-status').className = 'status-error';
     }
 });
