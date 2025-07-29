@@ -346,8 +346,8 @@
                         <div class="mb-3">
                             <div class="d-flex align-items-center justify-content-between mb-2">
                                 <div>
-                                    <h6 class="fw-semibold mb-1">Push Notifications</h6>
-                                    <span id="notification-status" class="status-disabled">Checking notification status...</span>
+                                    <h6 class="fw-semibold mb-1">Push Notifications <small class="text-muted">(Optional)</small></h6>
+                                    <span id="notification-status" class="status-disabled">Checking availability...</span>
                                 </div>
                             </div>
                             
@@ -370,13 +370,10 @@
 
                         <div class="mt-3 p-3 bg-light rounded">
                             <h6 class="fw-semibold mb-2">
-                                <i class="fas fa-info-circle me-1"></i>About Push Notifications
+                                <i class="fas fa-info-circle me-1"></i>About Notifications
                             </h6>
-                            <p class="small text-muted mb-2">
-                                Get real-time trading alerts directly on your mobile device when your bot detects opportunities.
-                            </p>
-                            <p class="small text-info mb-0">
-                                <strong>Note:</strong> Notifications work even when browser is closed or phone is locked!
+                            <p class="small text-muted mb-0">
+                                Get alerts on your phone when trading opportunities are detected. <strong>Your trading works perfectly without this.</strong>
                             </p>
                         </div>
 
@@ -391,6 +388,30 @@
                             <button class="btn btn-sm btn-outline-warning mt-2" onclick="copyDebugInfo()">
                                 <i class="fas fa-copy me-1"></i>Copy Debug Info
                             </button>
+                        </div>
+
+                        <!-- iPhone/In-App Browser Instructions -->
+                        <div class="mt-3 p-3 bg-info bg-opacity-10 rounded" id="iphone-instructions" style="display: none;">
+                            <h6 class="fw-semibold mb-2">
+                                <i class="fas fa-mobile-alt me-1"></i>Want Mobile Alerts?
+                            </h6>
+                            <p class="small mb-2">For mobile push notifications, open this site in:</p>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <button class="btn btn-sm btn-outline-primary w-100" onclick="openInSafari()">
+                                        <i class="fas fa-external-link-alt me-1"></i>Safari
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-sm btn-outline-success w-100" onclick="copyWebsiteUrl()">
+                                        <i class="fas fa-copy me-1"></i>Copy Link
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Your trading works great here! This is just for convenience.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -612,8 +633,11 @@ let pushManager = null;
 document.addEventListener('DOMContentLoaded', async () => {
     // Debug: Log browser info for troubleshooting
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
+    const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent) && !/GSA/i.test(navigator.userAgent);
     const isEdge = /Edg/i.test(navigator.userAgent);
+    const isGoogleApp = /GSA/i.test(navigator.userAgent);
+    const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent) && !/GSA/i.test(navigator.userAgent);
+    const isInAppBrowser = /GSA|FBAN|FBAV|Instagram|LinkedIn|Twitter/i.test(navigator.userAgent);
     const hasServiceWorker = 'serviceWorker' in navigator;
     const hasPushManager = 'PushManager' in window;
     const hasNotifications = 'Notification' in window;
@@ -624,6 +648,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         isMobile,
         isChrome,
         isEdge,
+        isGoogleApp,
+        isSafari,
+        isInAppBrowser,
         hasServiceWorker,
         hasPushManager,
         hasNotifications,
@@ -638,8 +665,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Populate debug information
     debugInfo.innerHTML = `
-        <div><strong>Browser:</strong> ${isChrome ? 'Chrome' : isEdge ? 'Edge' : 'Other'}</div>
+        <div><strong>Browser:</strong> ${isGoogleApp ? 'Google App' : isChrome ? 'Chrome' : isEdge ? 'Edge' : isSafari ? 'Safari' : 'Other'}</div>
         <div><strong>Mobile:</strong> ${isMobile ? 'Yes' : 'No'}</div>
+        <div><strong>In-App Browser:</strong> ${isInAppBrowser ? 'Yes (Limited Features)' : 'No'}</div>
         <div><strong>HTTPS:</strong> ${isHTTPS ? 'Yes' : 'No'}</div>
         <div><strong>Service Worker:</strong> ${hasServiceWorker ? 'Supported' : 'Not Supported'}</div>
         <div><strong>Push Manager:</strong> ${hasPushManager ? 'Available' : 'Not Available'}</div>
@@ -655,10 +683,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (isChrome && isMobile) {
             document.getElementById('notification-status').textContent = 'Chrome mobile needs HTTPS - site must be secure for notifications';
+        } else if (isGoogleApp) {
+            document.getElementById('notification-status').textContent = 'Not available in search app';
+        } else if (isInAppBrowser) {
+            document.getElementById('notification-status').textContent = 'Not available in this browser';
         } else if (isChrome) {
-            document.getElementById('notification-status').textContent = 'Chrome needs HTTPS for notifications - contact support';
+            document.getElementById('notification-status').textContent = 'Chrome needs secure connection';
         } else {
-            document.getElementById('notification-status').textContent = 'HTTPS required for mobile notifications';
+            document.getElementById('notification-status').textContent = 'Secure connection required';
         }
         document.getElementById('notification-status').className = 'status-error';
         document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
@@ -673,6 +705,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (isMobile && isChrome) {
             document.getElementById('notification-status').textContent = 'Chrome mobile detected - try updating Chrome or check site permissions';
+        } else if (isGoogleApp) {
+            document.getElementById('notification-status').textContent = 'Google App detected - please open website in Safari or Chrome browser';
+        } else if (isInAppBrowser) {
+            document.getElementById('notification-status').textContent = 'In-app browser detected - please open website in Safari or Chrome browser';
         } else if (isMobile) {
             document.getElementById('notification-status').textContent = 'Try Chrome, Safari, or Edge for mobile notifications';
         } else if (isEdge) {
@@ -682,6 +718,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         document.getElementById('notification-status').className = 'status-error';
         document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
+        
+        // Show iPhone instructions for Google App users
+        if (isGoogleApp || (isInAppBrowser && /iPhone|iPad|iPod/i.test(navigator.userAgent))) {
+            document.getElementById('iphone-instructions').style.display = 'block';
+        }
         return;
     }
     
@@ -692,6 +733,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (isMobile && isChrome) {
             document.getElementById('notification-status').textContent = 'Chrome mobile - notifications may be disabled in site settings';
+        } else if (isGoogleApp) {
+            document.getElementById('notification-status').textContent = 'Google App has limited features - open website in Safari or Chrome for notifications';
+        } else if (isInAppBrowser) {
+            document.getElementById('notification-status').textContent = 'In-app browser has limited features - open website in Safari or Chrome';
         } else if (isMobile) {
             document.getElementById('notification-status').textContent = 'Try Chrome, Safari, or Edge for mobile notifications';
         } else if (isEdge) {
@@ -768,12 +813,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
             }
         } else {
-            document.getElementById('notification-status').textContent = 'Server configuration error';
+            document.getElementById('notification-status').textContent = 'Not available';
             document.getElementById('notification-status').className = 'status-error';
         }
     } catch (error) {
         console.error('Failed to initialize notifications:', error);
-        document.getElementById('notification-status').textContent = 'Connection error: ' + error.message;
+        document.getElementById('notification-status').textContent = 'Not available';
         document.getElementById('notification-status').className = 'status-error';
     }
 });
@@ -820,7 +865,7 @@ async function enableNotifications() {
                 throw new Error('Failed to save subscription');
             }
         } else {
-            showAlert('Please allow notifications in your browser settings', 'error');
+            showAlert('Browser permission needed', 'error');
         }
     } catch (error) {
         console.error('Failed to enable notifications:', error);
@@ -917,6 +962,43 @@ Timestamp: ${new Date().toISOString()}`;
             showAlert('Debug info copied to clipboard!', 'success');
         } catch (err) {
             showAlert('Could not copy to clipboard', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
+}
+
+function openInSafari() {
+    // For iOS, this will attempt to open the URL in Safari
+    const currentUrl = window.location.href;
+    // iOS Safari URL scheme
+    window.location.href = `safari://${currentUrl.replace('https://', '')}`;
+    
+    // Fallback: show instructions
+    setTimeout(() => {
+        showAlert('If Safari didn\'t open, try: Share button → "Open in Safari"', 'info');
+    }, 1000);
+}
+
+function copyWebsiteUrl() {
+    const currentUrl = window.location.href;
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(currentUrl).then(() => {
+            showAlert('Website URL copied! Paste in Safari or Chrome app', 'success');
+        }).catch(() => {
+            showAlert('Could not copy URL', 'error');
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = currentUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showAlert('Website URL copied! Paste in Safari or Chrome app', 'success');
+        } catch (err) {
+            showAlert('Could not copy URL', 'error');
         }
         document.body.removeChild(textArea);
     }
