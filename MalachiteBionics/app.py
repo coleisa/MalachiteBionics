@@ -12,6 +12,7 @@ import secrets
 import json
 import uuid
 from dotenv import load_dotenv
+from push_notifications import PushNotificationService
 
 # Load environment variables
 load_dotenv()
@@ -72,6 +73,9 @@ login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
 login_manager.session_protection = 'strong'
+
+# Initialize push notification service
+push_service = PushNotificationService()
 login_manager.remember_cookie_duration = timedelta(days=30)
 
 # Configure Stripe
@@ -110,6 +114,12 @@ class User(UserMixin, db.Model):
     bot_status = db.Column(db.String(20), default='offline')  # 'online', 'offline'
     bot_last_active = db.Column(db.DateTime)
     bot_activated_at = db.Column(db.DateTime)
+    
+    # Push notification subscription fields
+    push_subscription_endpoint = db.Column(db.Text)
+    push_subscription_p256dh = db.Column(db.String(200))
+    push_subscription_auth = db.Column(db.String(100))
+    push_notifications_enabled = db.Column(db.Boolean, default=False)
     
     # Subscription relationship
     subscriptions = db.relationship('Subscription', backref='user', lazy=True)
@@ -1935,6 +1945,101 @@ def admin_send_welcome_email(user_id):
         flash('Error sending welcome email.', 'error')
     
     return redirect(url_for('admin_user_detail', user_id=user_id))
+
+# Push Notification API Routes
+@app.route('/api/push/vapid-public-key')
+def get_vapid_public_key():
+    """Get the VAPID public key for push notification subscription"""
+    try:
+        public_key = push_service.get_vapid_public_key()
+        return jsonify({'publicKey': public_key})
+    except Exception as e:
+        logger.error(f"Error getting VAPID public key: {e}")
+        return jsonify({'error': 'Failed to get public key'}), 500
+
+@app.route('/api/push/subscribe', methods=['POST'])
+@login_required
+def subscribe_to_push():
+    """Subscribe user to push notifications"""
+    try:
+        subscription_data = request.json
+        
+        if not subscription_data:
+            return jsonify({'error': 'No subscription data provided'}), 400
+        
+        # Extract subscription details
+        endpoint = subscription_data.get('endpoint')
+        keys = subscription_data.get('keys', {})
+        p256dh = keys.get('p256dh')
+        auth = keys.get('auth')
+        
+        if not all([endpoint, p256dh, auth]):
+            return jsonify({'error': 'Invalid subscription data'}), 400
+        
+        # Update user with subscription details
+        current_user.push_subscription_endpoint = endpoint
+        current_user.push_subscription_p256dh = p256dh
+        current_user.push_subscription_auth = auth
+        current_user.push_notifications_enabled = True
+        
+        db.session.commit()
+        
+        logger.info(f"User {current_user.email} subscribed to push notifications")
+        return jsonify({'success': True, 'message': 'Successfully subscribed to push notifications'})
+        
+    except Exception as e:
+        logger.error(f"Error subscribing to push notifications: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to subscribe'}), 500
+
+@app.route('/api/push/unsubscribe', methods=['POST'])
+@login_required
+def unsubscribe_from_push():
+    """Unsubscribe user from push notifications"""
+    try:
+        # Clear user's subscription details
+        current_user.push_subscription_endpoint = None
+        current_user.push_subscription_p256dh = None
+        current_user.push_subscription_auth = None
+        current_user.push_notifications_enabled = False
+        
+        db.session.commit()
+        
+        logger.info(f"User {current_user.email} unsubscribed from push notifications")
+        return jsonify({'success': True, 'message': 'Successfully unsubscribed from push notifications'})
+        
+    except Exception as e:
+        logger.error(f"Error unsubscribing from push notifications: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to unsubscribe'}), 500
+
+@app.route('/api/push/test', methods=['POST'])
+@login_required
+def test_push_notification():
+    """Send a test push notification to the current user"""
+    try:
+        if not current_user.push_notifications_enabled:
+            return jsonify({'error': 'Push notifications not enabled'}), 400
+        
+        # Send test notification
+        result = push_service.send_trading_alert_notification(
+            user=current_user,
+            symbol="TEST",
+            price="$50,000",
+            change="+5.2%",
+            algorithm="Test",
+            alert_type="test",
+            confidence="95%"
+        )
+        
+        if result:
+            return jsonify({'success': True, 'message': 'Test notification sent successfully'})
+        else:
+            return jsonify({'error': 'Failed to send test notification'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error sending test push notification: {e}")
+        return jsonify({'error': 'Failed to send test notification'}), 500
 
 # Error handlers
 @app.errorhandler(404)
