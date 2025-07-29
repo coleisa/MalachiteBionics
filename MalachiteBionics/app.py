@@ -1094,7 +1094,7 @@ def get_time_ago(timestamp):
 @app.route('/subscribe/<plan_type>')
 @login_required
 def subscribe(plan_type):
-    if plan_type not in ['v3', 'v6', 'v9']:
+    if plan_type not in ['v3', 'v6', 'v9', 'elite']:
         flash('Invalid plan type.', 'error')
         return redirect(url_for('pricing'))
     
@@ -1113,7 +1113,7 @@ def create_checkout_session():
         plan_type = request.form.get('plan_type')
         coins = request.form.getlist('coins')
         
-        if not plan_type or plan_type not in ['v3', 'v6', 'v9']:
+        if not plan_type or plan_type not in ['v3', 'v6', 'v9', 'elite']:
             return jsonify({'error': 'Invalid plan type'}), 400
         
         if not coins:
@@ -1124,9 +1124,10 @@ def create_checkout_session():
         
         # Define pricing (in pence - GBP)
         prices = {
-            'v3': 299,   # £2.99
-            'v6': 499,   # £4.99
-            'v9': 799    # £7.99
+            'v3': 299,    # £2.99
+            'v6': 499,    # £4.99
+            'v9': 799,    # £7.99
+            'elite': 1499 # £14.99
         }
         
         # Create or get Stripe customer
