@@ -2047,6 +2047,22 @@ def test_push_notification():
         logger.error(f"Error sending test push notification: {e}")
         return jsonify({'error': 'Failed to send test notification'}), 500
 
+# Service Worker route with correct MIME type
+@app.route('/static/sw.js')
+def service_worker():
+    """Serve service worker with correct Content-Type header"""
+    from flask import send_from_directory, make_response
+    
+    try:
+        response = make_response(send_from_directory('static', 'sw.js'))
+        response.headers['Content-Type'] = 'application/javascript'
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Service-Worker-Allowed'] = '/'
+        return response
+    except Exception as e:
+        logger.error(f"Error serving service worker: {e}")
+        return "Service worker not found", 404
+
 # Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
