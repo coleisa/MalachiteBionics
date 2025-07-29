@@ -50,42 +50,69 @@ class WebsiteTradingBot:
             return False
     
     def get_active_subscriptions(self) -> List[Dict]:
-        """Get all active user subscriptions with their 2 selected coins"""
+        """Get all users with online bot status (admin + active subscribers)"""
         try:
             with self.db_connection.cursor() as cursor:
+                # Get all users with online bot status
                 query = """
                     SELECT 
                         u.id as user_id,
                         u.email,
                         u.display_name,
+                        u.is_admin,
+                        u.bot_status,
+                        u.bot_last_active,
                         s.plan_type,
                         s.coins,
-                        s.status
+                        s.status as subscription_status
                     FROM users u
-                    INNER JOIN subscription s ON u.id = s.user_id
-                    WHERE s.status = 'active' AND u.is_active = true
+                    LEFT JOIN subscription s ON u.id = s.user_id AND s.status = 'active'
+                    WHERE u.bot_status = 'online' 
+                    AND u.is_active = true
+                    AND (
+                        u.is_admin = true OR 
+                        (s.status = 'active' AND s.id IS NOT NULL)
+                    )
                 """
                 cursor.execute(query)
-                subscriptions = cursor.fetchall()
+                users = cursor.fetchall()
                 
                 result = []
-                for sub in subscriptions:
+                for user in users:
                     try:
-                        # Parse the coins JSON
-                        coins_list = json.loads(sub['coins']) if sub['coins'] else []
-                        if len(coins_list) <= 2:  # Respect 2-coin limitation
-                            result.append({
-                                'user_id': sub['user_id'],
-                                'email': sub['email'],
-                                'display_name': sub['display_name'],
-                                'plan_type': sub['plan_type'],
-                                'coins': coins_list
-                            })
-                    except json.JSONDecodeError:
-                        logger.warning(f"Invalid coins JSON for user {sub['user_id']}")
+                        user_data = {
+                            'user_id': user['user_id'],
+                            'email': user['email'],
+                            'display_name': user['display_name'],
+                            'is_admin': user['is_admin'],
+                            'bot_status': user['bot_status'],
+                            'coins': []
+                        }
+                        
+                        if user['is_admin']:
+                            # Admin gets free version with default coins (SOL, RAY from your Discord bot)
+                            user_data['plan_type'] = 'free'
+                            user_data['coins'] = ['SOL', 'RAY']  # Your Discord bot's coins
+                        else:
+                            # Regular customer with subscription
+                            if user['coins']:
+                                coins_list = json.loads(user['coins'])
+                                if len(coins_list) <= 2:  # Respect 2-coin limitation
+                                    user_data['plan_type'] = user['plan_type']
+                                    user_data['coins'] = coins_list
+                                else:
+                                    continue  # Skip if too many coins
+                            else:
+                                continue  # Skip if no coins selected
+                        
+                        if user_data['coins']:  # Only add if has coins to monitor
+                            result.append(user_data)
+                            
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.warning(f"Invalid coins JSON for user {user['user_id']}: {e}")
                         continue
                 
-                logger.info(f"Found {len(result)} active subscriptions")
+                logger.info(f"Found {len(result)} users with online bots ({sum(1 for u in result if u['is_admin'])} admin, {sum(1 for u in result if not u['is_admin'])} customers)")
                 return result
                 
         except Exception as e:
@@ -167,32 +194,24 @@ class WebsiteTradingBot:
         return None
 
     def calculate_rsi(self, closes: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate RSI (same as your bot)"""
+        """Calculate RSI (your v12 algorithm)"""
         try:
             if len(closes) < period + 1:
                 logger.warning(f"Insufficient data for RSI calculation: {len(closes)} < {period + 1}")
                 return pd.Series([50] * len(closes), index=closes.index)
             
             delta = closes.diff()
-            gain = delta.where(delta > 0, 0.0)
-            loss = -delta.where(delta < 0, 0.0)
-            
-            avg_gain = gain.rolling(window=period, min_periods=period).mean()
-            avg_loss = loss.rolling(window=period, min_periods=period).mean()
-            
-            # Avoid division by zero
-            avg_loss = avg_loss.replace(0, 1e-8)
-            
-            rs = avg_gain / avg_loss
+            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+            rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
-            
-            return rsi
+            return rsi.fillna(50)
         except Exception as e:
             logger.error(f"Error calculating RSI: {e}")
             return pd.Series([50] * len(closes), index=closes.index)
 
     def calculate_macd(self, series: pd.Series, short_span: int = 12, long_span: int = 26, signal_span: int = 9):
-        """Calculate MACD (same as your bot)"""
+        """Calculate MACD (your v12 algorithm)"""
         try:
             if len(series) < long_span:
                 logger.warning(f"Insufficient data for MACD calculation: {len(series)} < {long_span}")
@@ -225,6 +244,49 @@ class WebsiteTradingBot:
             logger.error(f"Error calculating momentum: {e}")
             return pd.Series([0] * len(series), index=series.index)
 
+    def calculate_confidence(self, rsi_val: float, macd_val: float) -> float:
+        """Calculate confidence score (your v12 algorithm)"""
+        try:
+            # Confidence based on how far RSI is from 50 and MACD histogram magnitude
+            rsi_conf = abs(rsi_val - 50) / 50  # normalized 0 to 1
+            macd_conf = min(abs(macd_val) * 10, 1)  # scale MACD and cap at 1
+            combined_conf = (rsi_conf + macd_conf) / 2
+            return combined_conf * 100  # scale to 0-100
+        except Exception as e:
+            logger.error(f"Error calculating confidence: {e}")
+            return 50.0
+
+    def update_user_bot_activity(self, user_id: int):
+        """Update user's bot last active timestamp"""
+        try:
+            with self.db_connection.cursor() as cursor:
+                query = """
+                    UPDATE users 
+                    SET bot_last_active = %s 
+                    WHERE id = %s AND bot_status = 'online'
+                """
+                cursor.execute(query, (datetime.utcnow(), user_id))
+                self.db_connection.commit()
+        except Exception as e:
+            logger.error(f"Error updating bot activity for user {user_id}: {e}")
+
+    def predict_free(self, rsi_value: float, macd_histogram: float) -> str:
+        """Free Algorithm - Admin's main_bot_code.py logic (RSI + MACD)"""
+        try:
+            rsi = float(rsi_value)
+            macd_val = float(macd_histogram)
+            
+            # Your main_bot_code.py algorithm: RSI < 30 and MACD > 0 = Buy, RSI > 70 and MACD < 0 = Sell
+            if rsi < 30 and macd_val > 0:
+                return "Buy"
+            elif rsi > 70 and macd_val < 0:
+                return "Sell"
+            else:
+                return "Neutral"
+                
+        except (ValueError, TypeError):
+            return "Neutral"
+
     def predict_v3(self, rsi_value: float) -> str:
         """V3 Trading Algorithm - RSI only (your original logic)"""
         try:
@@ -233,6 +295,23 @@ class WebsiteTradingBot:
             if rsi <= 30:
                 return "Buy"
             elif rsi >= 70:
+                return "Sell"
+            else:
+                return "Neutral"
+                
+        except (ValueError, TypeError):
+            return "Neutral"
+
+    def predict_v12(self, rsi_value: float, macd_histogram: float) -> str:
+        """V12 Trading Algorithm - Your latest algorithm with RSI + MACD"""
+        try:
+            rsi = float(rsi_value)
+            macd_val = float(macd_histogram)
+            
+            # Your v12 algorithm logic: RSI < 30 and MACD > 0 = Buy, RSI > 70 and MACD < 0 = Sell
+            if rsi < 30 and macd_val > 0:
+                return "Buy"
+            elif rsi > 70 and macd_val < 0:
                 return "Sell"
             else:
                 return "Neutral"
@@ -362,9 +441,13 @@ class WebsiteTradingBot:
             symbol = f"{coin.upper()}USDT"
             user_id = user_data['user_id']
             plan_type = user_data['plan_type']
+            is_admin = user_data.get('is_admin', False)
             
-            # Fetch market data
-            df = await self.fetch_klines(symbol)
+            # Update user's bot activity
+            self.update_user_bot_activity(user_id)
+            
+            # Fetch market data (using 1h intervals like your v12 bot)
+            df = await self.fetch_klines(symbol, interval="1h", limit=100)
             if df is None or df.empty:
                 logger.warning(f"No data available for {symbol}")
                 return
@@ -375,78 +458,84 @@ class WebsiteTradingBot:
 
             # Calculate indicators
             df["rsi"] = self.calculate_rsi(df["close"])
-            rsi_val = df["rsi"].iloc[-1]
+            _, _, macd_histogram = self.calculate_macd(df["close"])
             
-            if pd.isna(rsi_val):
-                logger.warning(f"RSI calculation failed for {symbol}")
+            rsi_val = df["rsi"].iloc[-1]
+            macd_val = macd_histogram.iloc[-1]
+            
+            if pd.isna(rsi_val) or pd.isna(macd_val):
+                logger.warning(f"Indicator calculation failed for {symbol}")
                 return
 
             current_price = df["close"].iloc[-1]
             
-            # Calculate additional indicators based on plan
-            macd_hist = None
-            momentum = None
-            confidence = 85  # Default confidence
+            # Calculate confidence
+            confidence = self.calculate_confidence(rsi_val, macd_val)
             
-            if plan_type in ["v6", "v9", "elite"]:
-                _, _, macd_hist_series = self.calculate_macd(df["close"])
-                macd_hist = macd_hist_series.iloc[-1]
-                if pd.isna(macd_hist):
-                    logger.warning(f"MACD calculation failed for {symbol}")
-                    return
-                    
-            if plan_type in ["v9", "elite"]:
-                momentum_series = self.calculate_momentum(df["close"])
-                momentum = momentum_series.iloc[-1]
-                if pd.isna(momentum):
-                    logger.warning(f"Momentum calculation failed for {symbol}")
-                    return
-
             # Get prediction based on user's plan
             signal = "Neutral"
             
-            if plan_type == "v3":
+            if plan_type == "free":  # Admin gets free version
+                signal = self.predict_free(rsi_val, macd_val)
+                confidence = 80  # Free version confidence
+            elif plan_type in ["basic", "v3"]:  # Basic = V3
                 signal = self.predict_v3(rsi_val)
                 confidence = 80
-            elif plan_type == "v6":
-                signal = self.predict_v6(rsi_val, macd_hist)
+            elif plan_type in ["classic", "v6"]:  # Classic = V6
+                signal = self.predict_v6(rsi_val, macd_val)
                 confidence = 85
-            elif plan_type == "v9":
-                signal = self.predict_v9(rsi_val, macd_hist, momentum)
-                confidence = 90
-            elif plan_type == "elite":
-                signal = self.predict_elite(rsi_val, macd_hist, momentum)
+            elif plan_type in ["advanced", "v9"]:  # Advanced = V9
+                momentum_series = self.calculate_momentum(df["close"])
+                momentum_val = momentum_series.iloc[-1]
+                if not pd.isna(momentum_val):
+                    signal = self.predict_v9(rsi_val, macd_val, momentum_val)
+                    confidence = 90
+                else:
+                    signal = self.predict_v12(rsi_val, macd_val)  # Fallback to v12
+                    confidence = 90
+            elif plan_type in ["premium", "elite", "v12"]:  # Premium/Elite = V12
+                signal = self.predict_v12(rsi_val, macd_val)  # Premium & Elite use v12 algorithm
                 confidence = 95
+            else:
+                # Default to v12 algorithm for unknown plans
+                signal = self.predict_v12(rsi_val, macd_val)
+                confidence = 85
 
-            # Create alert if signal is actionable
+            # Log the analysis
+            user_type = "ADMIN" if is_admin else "CUSTOMER"
+            logger.info(f"{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} - {user_type} {user_data['email']} - {coin.upper()} RSI: {rsi_val:.2f}, MACD: {macd_val:.4f}")
+
+            # Create alert if signal is actionable (not Neutral)
             if signal in ["Buy", "Sell"]:
                 # Create detailed message
                 message = f"{signal.upper()} signal for {symbol}\n"
                 message += f"Algorithm: {plan_type.upper()}\n"
                 message += f"RSI: {rsi_val:.2f}\n"
-                
-                if macd_hist is not None:
-                    message += f"MACD Histogram: {macd_hist:.6f}\n"
-                if momentum is not None:
-                    message += f"Momentum: {momentum:.4f}\n"
-                
+                message += f"MACD Histogram: {macd_val:.4f}\n"
+                message += f"Confidence Score: {confidence:.1f}/100\n"
                 message += f"Price: ${current_price:.4f}\n"
-                message += f"Confidence: {confidence}%\n"
+                
+                if is_admin:
+                    message += f"Account: ADMIN (Free Version)\n"
+                else:
+                    message += f"Account: Customer ({plan_type.upper()})\n"
+                    
                 message += f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC"
                 
-                # Create the alert in database (replaces Discord message)
+                # Create the alert in database
                 success = self.create_trading_alert(
                     user_id=user_id,
-                    coin_pair=f"{coin}/USD",
+                    coin_pair=f"{coin.upper()}/USD",
                     alert_type=signal.lower(),
                     price=current_price,
-                    confidence=confidence,
+                    confidence=int(confidence),
                     algorithm=plan_type,
                     message=message
                 )
                 
                 if success:
-                    logger.info(f"Created {signal} alert for user {user_data['email']} - {symbol} ({plan_type})")
+                    user_label = f"ADMIN {user_data['email']}" if is_admin else f"CUSTOMER {user_data['email']}"
+                    logger.info(f"Created {signal} alert for {user_label} - {symbol} ({plan_type}) - Confidence: {confidence:.1f}%")
                 else:
                     logger.error(f"Failed to create alert for user {user_id} - {symbol}")
 
@@ -462,31 +551,39 @@ class WebsiteTradingBot:
             try:
                 start_time = datetime.utcnow()
                 
-                # Get all active subscriptions
-                subscriptions = self.get_active_subscriptions()
+                # Get all users with online bot status
+                active_users = self.get_active_subscriptions()
                 
-                if not subscriptions:
-                    logger.info("No active subscriptions found, sleeping...")
+                if not active_users:
+                    logger.info("No users with online bots found, sleeping...")
                     await asyncio.sleep(420)  # 7 minutes
                     continue
                 
                 # Process each user's coins
                 tasks = []
-                for user_data in subscriptions:
+                admin_count = 0
+                customer_count = 0
+                
+                for user_data in active_users:
+                    if user_data.get('is_admin'):
+                        admin_count += 1
+                    else:
+                        customer_count += 1
+                        
                     coins = user_data.get('coins', [])
                     for coin in coins:
                         if coin and coin.strip():  # Make sure coin is valid
                             tasks.append(self.analyze_coin_for_user(user_data, coin.strip()))
                 
                 if tasks:
-                    logger.info(f"Analyzing {len(tasks)} coin-user combinations")
+                    logger.info(f"Analyzing {len(tasks)} coin-user combinations ({admin_count} admin bots, {customer_count} customer bots)")
                     await asyncio.gather(*tasks, return_exceptions=True)
                 
                 # Update tracking
                 self.last_check = datetime.utcnow()
                 processing_time = (self.last_check - start_time).total_seconds()
                 
-                logger.info(f"Monitoring cycle completed in {processing_time:.2f}s for {len(subscriptions)} users")
+                logger.info(f"Monitoring cycle completed in {processing_time:.2f}s for {len(active_users)} users")
                 
                 # Wait 7 minutes before next cycle (same as your Discord bot)
                 await asyncio.sleep(420)
