@@ -372,9 +372,25 @@
                             <h6 class="fw-semibold mb-2">
                                 <i class="fas fa-info-circle me-1"></i>About Push Notifications
                             </h6>
-                            <p class="small text-muted mb-0">
+                            <p class="small text-muted mb-2">
                                 Get real-time trading alerts directly on your mobile device when your bot detects opportunities.
                             </p>
+                            <p class="small text-info mb-0">
+                                <strong>Note:</strong> Notifications work even when browser is closed or phone is locked!
+                            </p>
+                        </div>
+
+                        <!-- Debug Panel for troubleshooting -->
+                        <div class="mt-3 p-3 bg-warning bg-opacity-10 rounded" id="debug-panel" style="display: none;">
+                            <h6 class="fw-semibold mb-2">
+                                <i class="fas fa-bug me-1"></i>Debug Information
+                            </h6>
+                            <div class="small" id="debug-info">
+                                <!-- Debug info will be populated by JavaScript -->
+                            </div>
+                            <button class="btn btn-sm btn-outline-warning mt-2" onclick="copyDebugInfo()">
+                                <i class="fas fa-copy me-1"></i>Copy Debug Info
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -616,6 +632,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         hostname: location.hostname
     });
     
+    // Show debug panel for troubleshooting
+    const debugPanel = document.getElementById('debug-panel');
+    const debugInfo = document.getElementById('debug-info');
+    
+    // Populate debug information
+    debugInfo.innerHTML = `
+        <div><strong>Browser:</strong> ${isChrome ? 'Chrome' : isEdge ? 'Edge' : 'Other'}</div>
+        <div><strong>Mobile:</strong> ${isMobile ? 'Yes' : 'No'}</div>
+        <div><strong>HTTPS:</strong> ${isHTTPS ? 'Yes' : 'No'}</div>
+        <div><strong>Service Worker:</strong> ${hasServiceWorker ? 'Supported' : 'Not Supported'}</div>
+        <div><strong>Push Manager:</strong> ${hasPushManager ? 'Available' : 'Not Available'}</div>
+        <div><strong>Notifications:</strong> ${hasNotifications ? 'Supported' : 'Not Supported'}</div>
+        <div><strong>Permission:</strong> ${hasNotifications ? Notification.permission : 'N/A'}</div>
+        <div class="mt-2"><strong>User Agent:</strong><br><small>${navigator.userAgent}</small></div>
+    `;
+    
     // Check if we're on HTTPS (required for service workers on mobile)
     if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
         const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
@@ -629,6 +661,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('notification-status').textContent = 'HTTPS required for mobile notifications';
         }
         document.getElementById('notification-status').className = 'status-error';
+        document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
         return;
     }
     
@@ -648,6 +681,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('notification-status').textContent = 'Please use Chrome, Firefox, Safari, or Edge browser';
         }
         document.getElementById('notification-status').className = 'status-error';
+        document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
         return;
     }
     
@@ -668,6 +702,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('notification-status').textContent = 'Push notifications not available - try Chrome, Firefox, Safari, or Edge';
         }
         document.getElementById('notification-status').className = 'status-error';
+        document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
         return;
     }
     
@@ -730,6 +765,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 document.getElementById('notification-status').textContent = errorMessage;
                 document.getElementById('notification-status').className = 'status-error';
+                document.getElementById('debug-panel').style.display = 'block'; // Show debug panel
             }
         } else {
             document.getElementById('notification-status').textContent = 'Server configuration error';
@@ -854,6 +890,36 @@ function showAlert(message, type) {
     alertDiv.textContent = message;
     document.body.appendChild(alertDiv);
     setTimeout(() => alertDiv.remove(), 4000);
+}
+
+function copyDebugInfo() {
+    const debugText = document.getElementById('debug-info').innerText;
+    const fullDebug = `Push Notification Debug Report:
+${debugText}
+
+Current Status: ${document.getElementById('notification-status').textContent}
+Timestamp: ${new Date().toISOString()}`;
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(fullDebug).then(() => {
+            showAlert('Debug info copied to clipboard!', 'success');
+        }).catch(() => {
+            showAlert('Could not copy to clipboard', 'error');
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = fullDebug;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showAlert('Debug info copied to clipboard!', 'success');
+        } catch (err) {
+            showAlert('Could not copy to clipboard', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
 }
 </script>
 {% endblock %}
