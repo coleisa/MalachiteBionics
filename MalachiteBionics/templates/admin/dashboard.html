@@ -80,7 +80,7 @@
 
     <!-- Additional Stats Row -->
     <div class="row g-4 mb-5">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
@@ -96,7 +96,7 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
@@ -112,16 +112,77 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="me-3">
-                            <i class="fas fa-history fa-2x text-info"></i>
+                            <i class="fas fa-bell fa-2x text-info"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1">{{ stats.total_alerts }}</h4>
+                            <p class="text-muted mb-0">Total Alerts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-history fa-2x text-secondary"></i>
                         </div>
                         <div>
                             <h4 class="mb-1">{{ stats.total_subscriptions }}</h4>
                             <p class="text-muted mb-0">Total Subscriptions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row g-4 mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_alerts') }}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-bell fa-2x mb-2"></i>
+                                <strong>Manage Alerts</strong>
+                                <small class="text-muted">View all trading alerts</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_create_alert') }}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                                <strong>Create Alert</strong>
+                                <small class="text-muted">Send individual signal</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_broadcast_alert') }}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-broadcast-tower fa-2x mb-2"></i>
+                                <strong>Broadcast Alert</strong>
+                                <small class="text-muted">Send to multiple users</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3" onclick="location.reload()">
+                                <i class="fas fa-sync-alt fa-2x mb-2"></i>
+                                <strong>Refresh Data</strong>
+                                <small class="text-muted">Update statistics</small>
+                            </button>
                         </div>
                     </div>
                 </div>
