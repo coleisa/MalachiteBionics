@@ -145,7 +145,7 @@ class User(UserMixin, db.Model):
     def update_last_seen(self):
         """Update last seen timestamp"""
         self.last_seen = datetime.utcnow()
-        db.session.commit()
+        # Don't commit here - let the calling function handle the commit
     
     def get_active_subscription(self):
         return Subscription.query.filter_by(
@@ -222,6 +222,12 @@ def load_user(user_uuid):
         user = User.query.filter_by(uuid=user_uuid).first()
         if user:
             user.update_last_seen()
+            # Commit the last_seen update
+            try:
+                db.session.commit()
+            except Exception as commit_error:
+                logger.error(f"Failed to commit last_seen update for user {user_uuid}: {commit_error}")
+                db.session.rollback()
         return user
     except Exception as e:
         logger.error(f"Error loading user {user_uuid}: {e}")
@@ -775,6 +781,15 @@ def login():
             user.last_login = datetime.utcnow()
             user.login_count += 1
             user.update_last_seen()
+            
+            # Commit all changes
+            try:
+                db.session.commit()
+            except Exception as e:
+                logger.error(f"Database error during login: {e}")
+                db.session.rollback()
+                flash('Login failed due to a database error. Please try again.', 'error')
+                return render_template('login.html')
             
             login_user(user, remember=True, duration=timedelta(days=30))
             logger.info(f"User {user.email} logged in successfully")
