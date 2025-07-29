@@ -17,7 +17,7 @@
 <div class="container py-5">
     <!-- Contact Section -->
     <div class="row mb-5">
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 mb-4">
             <div class="feature-card h-100">
                 <div class="text-center mb-4">
                     <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 rounded-circle mb-3" style="width: 80px; height: 80px;">
@@ -35,7 +35,25 @@
             </div>
         </div>
         
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 mb-4">
+            <div class="feature-card h-100">
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 rounded-circle mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-flag fa-2x text-danger"></i>
+                    </div>
+                    <h3 class="fw-bold">Report a Bug</h3>
+                </div>
+                <p class="text-muted mb-4">Found an issue? Help us improve by reporting bugs. Include details about what happened and when.</p>
+                <div class="text-center">
+                    <a href="mailto:{{ business_email }}?subject=Bug Report - Trading Bot&body=Please describe the bug you encountered:%0D%0A%0D%0ASteps to reproduce:%0D%0A1. %0D%0A2. %0D%0A3. %0D%0A%0D%0AExpected behavior:%0D%0A%0D%0AActual behavior:%0D%0A%0D%0ABrowser/Device information:%0D%0A" class="btn btn-danger btn-lg">
+                        <i class="fas fa-flag me-2"></i>
+                        Report Bug
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-4">
             <div class="feature-card h-100">
                 <div class="text-center mb-4">
                     <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 rounded-circle mb-3" style="width: 80px; height: 80px;">
