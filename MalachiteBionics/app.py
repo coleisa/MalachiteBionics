@@ -72,7 +72,7 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
-login_manager.session_protection = 'strong'
+login_manager.session_protection = 'basic'  # Changed from 'strong' to 'basic' to prevent logouts on refresh
 
 # Initialize push notification service
 push_service = PushNotificationService()
@@ -812,6 +812,7 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+        remember = request.form.get('remember')  # Get remember checkbox value
         
         if not email or not password:
             flash('Email and password are required.', 'error')
@@ -826,8 +827,9 @@ def login():
                     flash('Please verify your email before logging in. Check your inbox for the verification link.', 'warning')
                     return render_template('login.html')
                 
-                # Simple login without complex tracking for now
-                login_user(user, remember=True, duration=timedelta(days=30))
+                # Use remember checkbox value, default to extended session
+                remember_user = bool(remember) if remember else True
+                login_user(user, remember=remember_user, duration=timedelta(days=30))
                 logger.info(f"User {user.email} logged in successfully")
                 
                 next_page = request.args.get('next')
