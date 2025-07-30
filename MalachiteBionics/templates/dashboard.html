@@ -796,12 +796,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                         solution: 'Update your iPhone/iPad to iOS 16.4+ in Settings > General > Software Update',
                         canFix: true
                     };
-                } else {
+                } else if (isIOS) {
                     return {
                         compatible: false,
-                        reason: 'safari-settings',
-                        message: 'Safari notifications may be disabled',
-                        solution: 'Check Safari Settings > Websites > Notifications and allow this site',
+                        reason: 'safari-ios-permissions',
+                        message: 'Safari notifications need permission when prompted',
+                        solution: 'When you tap "Enable Instant Alerts", make sure to tap "Allow" when Safari asks for notification permission. If you previously denied it, go to iPhone Settings > Notifications > Safari > allow notifications, then refresh this page.',
+                        canFix: true
+                    };
+                } else {
+                    // Desktop Safari
+                    return {
+                        compatible: false,
+                        reason: 'safari-desktop',
+                        message: 'Safari notifications may need permission',
+                        solution: 'Click "Enable Instant Alerts" and allow notifications when prompted. If issues persist, check Safari menu > Settings for Websites > Notifications.',
                         canFix: true
                     };
                 }
