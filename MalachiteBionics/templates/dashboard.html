@@ -44,7 +44,7 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-8">
-                <h1 class="display-5 fw-bold mb-3">Welcome Back, {{ user.display_name }}</h1>
+                <h1 class="display-5 fw-bold mb-3">Welcome Back, {{ user.display_name[:15] }}{% if user.display_name|length > 15 %}...{% endif %}</h1>
                 <p class="lead text-muted mb-0">
                     Monitor your trading performance and manage your subscription
                 </p>
@@ -52,7 +52,13 @@
             <div class="col-lg-4 text-lg-end">
                 <div class="d-flex align-items-center justify-content-lg-end gap-3">
                     <div class="text-center">
-                        <div class="h4 fw-bold mb-1" style="color: #22c55e;">ACTIVE</div>
+                        <div class="h4 fw-bold mb-1" style="color: #22c55e;">
+                            {% if user.bot_status == 'online' %}
+                                ONLINE
+                            {% else %}
+                                OFFLINE
+                            {% endif %}
+                        </div>
                         <small class="text-muted">Status</small>
                     </div>
                     <div class="vr" style="height: 40px;"></div>
@@ -747,7 +753,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Comprehensive compatibility assessment and user guidance
     function getCompatibilityStatus() {
-        // Check HTTPS requirement
+        // Check HTTPS requirement first
         if (!isHTTPS) {
             return {
                 compatible: false,
@@ -785,105 +791,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         }
         
-        // Check browser compatibility
-        if (!hasServiceWorker || !hasPushManager || !hasNotifications) {
-            if (isSafari) {
-                if (isIOS && !isVersionSupported()) {
-                    return {
-                        compatible: false,
-                        reason: 'safari-version',
-                        message: `Safari notifications need iOS 16.4 or later (you have ${browserVersion ? browserVersion.string : 'unknown'})`,
-                        solution: 'Update your iPhone/iPad to iOS 16.4+ in Settings > General > Software Update',
-                        canFix: true
-                    };
-                } else if (isIOS) {
-                    return {
-                        compatible: false,
-                        reason: 'safari-ios-permissions',
-                        message: 'Safari notifications need permission when prompted',
-                        solution: 'When you tap "Enable Instant Alerts", make sure to tap "Allow" when Safari asks for notification permission. If you previously denied it, go to iPhone Settings > Notifications > Safari > allow notifications, then refresh this page.',
-                        canFix: true
-                    };
-                } else {
-                    // Desktop Safari
-                    return {
-                        compatible: false,
-                        reason: 'safari-desktop',
-                        message: 'Safari notifications may need permission',
-                        solution: 'Click "Enable Instant Alerts" and allow notifications when prompted. If issues persist, check Safari menu > Settings for Websites > Notifications.',
-                        canFix: true
-                    };
-                }
-            } else if (isChrome) {
-                if (!isVersionSupported()) {
-                    return {
-                        compatible: false,
-                        reason: 'chrome-version',
-                        message: `Chrome version is too old for notifications (you have v${browserVersion ? browserVersion.string : 'unknown'})`,
-                        solution: 'Update Chrome to the latest version from Google Play Store or chrome.google.com',
-                        canFix: true
-                    };
-                } else {
-                    return {
-                        compatible: false,
-                        reason: 'chrome-settings',
-                        message: 'Chrome notifications may be disabled',
-                        solution: 'Check Chrome Settings > Site Settings > Notifications and allow this site',
-                        canFix: true
-                    };
-                }
-            } else if (isFirefox) {
-                if (!isVersionSupported()) {
-                    return {
-                        compatible: false,
-                        reason: 'firefox-version',
-                        message: `Firefox version is too old for notifications (you have v${browserVersion ? browserVersion.string : 'unknown'})`,
-                        solution: 'Update Firefox to the latest version',
-                        canFix: true
-                    };
-                } else {
-                    return {
-                        compatible: false,
-                        reason: 'firefox-settings',
-                        message: 'Firefox notifications may be disabled',
-                        solution: 'Check Firefox Settings > Privacy & Security > Notifications and allow this site',
-                        canFix: true
-                    };
-                }
-            } else if (isEdge) {
-                if (!isVersionSupported()) {
-                    return {
-                        compatible: false,
-                        reason: 'edge-version',
-                        message: `Edge version is too old for notifications (you have v${browserVersion ? browserVersion.string : 'unknown'})`,
-                        solution: 'Update Microsoft Edge to the latest version',
-                        canFix: true
-                    };
-                } else {
-                    return {
-                        compatible: false,
-                        reason: 'edge-settings',
-                        message: 'Edge notifications may be disabled',
-                        solution: 'Check Edge Settings > Site permissions > Notifications and allow this site',
-                        canFix: true
-                    };
-                }
-            } else {
-                return {
-                    compatible: false,
-                    reason: 'unsupported-browser',
-                    message: 'Browser does not support notifications',
-                    solution: 'Switch to Chrome, Firefox, Safari, or Edge for notification support',
-                    canFix: true
-                };
-            }
+        // For modern browsers, be more permissive - try to enable notifications
+        if (hasServiceWorker && hasPushManager && hasNotifications) {
+            return {
+                compatible: true,
+                message: 'Ready to enable notifications',
+                solution: null
+            };
         }
         
-        // All checks passed
+        // If basic features are missing, provide generic advice
         return {
-            compatible: true,
-            message: 'Ready to enable notifications',
-            solution: null
+            compatible: false,
+            reason: 'browser-compatibility',
+            message: 'Browser may not support notifications',
+            solution: 'Try updating your browser or use Chrome, Firefox, Safari, or Edge for best compatibility',
+            canFix: true
         };
     }
     
@@ -896,12 +819,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Get VAPID public key from server
             const response = await fetch('/api/push/vapid-public-key');
             if (!response.ok) {
-                throw new Error('Server connection failed');
+                throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
+            console.log('VAPID key response:', data);
             
-            if (data.publicKey) {
+            if (data.publicKey && data.publicKey !== 'dummy-public-key') {
                 // Register service worker
                 try {
                     const swRegistration = await navigator.serviceWorker.register('/static/sw.js');
@@ -919,15 +843,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     updateNotificationUI();
                 } catch (swError) {
+                    console.error('Service Worker registration failed:', swError);
                     document.getElementById('notification-status').textContent = 'Service registration failed - try refreshing the page';
                     document.getElementById('notification-status').className = 'status-error';
                 }
             } else {
-                document.getElementById('notification-status').textContent = 'Server configuration error - contact support';
+                document.getElementById('notification-status').textContent = 'Server configuration pending - notifications will be available soon';
                 document.getElementById('notification-status').className = 'status-error';
             }
         } catch (error) {
-            document.getElementById('notification-status').textContent = 'Connection error - check your internet connection';
+            console.error('Push notification initialization error:', error);
+            document.getElementById('notification-status').textContent = 'Connection error - check your internet connection and try refreshing';
             document.getElementById('notification-status').className = 'status-error';
         }
     } else {
