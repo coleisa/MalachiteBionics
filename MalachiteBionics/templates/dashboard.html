@@ -341,97 +341,110 @@
             
             <!-- Right Column -->
             <div class="col-lg-6">
-                <!-- Mobile Push Notifications -->
-                <div class="card mb-4">
+                <!-- Email Notifications - Reliable Alternative -->
+                <div class="card mb-4" style="border: 2px solid #22c55e; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);">
                     <div class="card-body">
-                        <h5 class="card-title mb-3">
-                            <i class="fas fa-mobile-alt me-2" style="color: #3b82f6;"></i>
-                            Mobile Notifications
-                        </h5>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="card-title mb-0" style="color: #15803d;">
+                                <i class="fas fa-envelope me-2" style="color: #22c55e;"></i>
+                                Trading Alerts - Email System
+                            </h5>
+                            <span class="badge bg-success px-3 py-2">
+                                <i class="fas fa-check-circle me-1"></i>Active & Reliable
+                            </span>
+                        </div>
                         
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="alert alert-success border-0 mb-4" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5);">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle me-2" style="color: #22c55e; font-size: 18px;"></i>
                                 <div>
-                                    <h6 class="fw-semibold mb-1">Push Notifications <small class="text-success">(Recommended)</small></h6>
-                                    <span id="notification-status" class="status-disabled">Checking availability...</span>
+                                    <strong style="color: #15803d;">Perfect Mobile Solution!</strong><br>
+                                    <small style="color: #166534;">Email notifications work flawlessly on all phones - no complex setup needed.</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Main Email Alert Controls -->
+                        <div class="mb-4 p-4" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; border: 2px solid #22c55e;">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3">
+                                    <div style="width: 48px; height: 48px; background: #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-envelope" style="color: white; font-size: 20px;"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1" style="color: #15803d;">Email Alerts - Always Works! ✅</h6>
+                                    <p class="small text-success mb-0">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        Active for {{ user.email }}
+                                    </p>
                                 </div>
                             </div>
                             
-                            <!-- Mobile-friendly notification controls -->
-                            <div class="d-grid gap-2" id="notification-controls">
-                                <button type="button" id="enable-btn" class="btn btn-success btn-sm" 
-                                        onclick="enableNotifications()" style="display: none;">
-                                    <i class="fas fa-bell me-1"></i>Enable Instant Alerts
-                                </button>
-                                <button type="button" id="disable-btn" class="btn btn-outline-danger btn-sm" 
-                                        onclick="disableNotifications()" style="display: none;">
-                                    <i class="fas fa-bell-slash me-1"></i>Disable Alerts
-                                </button>
-                                <button type="button" id="test-btn" class="btn btn-outline-info btn-sm" 
-                                        onclick="testNotification()">
-                                    <i class="fas fa-paper-plane me-1"></i>Test Alert
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 p-3 bg-light rounded">
-                            <h6 class="fw-semibold mb-2">
-                                <i class="fas fa-info-circle me-1"></i>Why Enable Notifications?
-                            </h6>
-                            <p class="small text-muted mb-2">
-                                Get instant alerts when trading opportunities are detected. <strong>No need to constantly check the website.</strong>
-                            </p>
-                            <p class="small text-success mb-0">
-                                <i class="fas fa-check-circle me-1"></i>
-                                <strong>Recommended:</strong> Stay informed without monitoring the dashboard 24/7.
-                            </p>
-                        </div>
-
-                        <!-- Alternative Browser Instructions -->
-                        <div class="mt-3 p-3 bg-info bg-opacity-10 rounded" id="browser-instructions" style="display: none;">
-                            <h6 class="fw-semibold mb-2">
-                                <i class="fas fa-mobile-alt me-1"></i>Switch to a Compatible Browser
-                            </h6>
-                            <p class="small mb-2">For instant trading notifications, please use one of these browsers:</p>
                             <div class="row g-2 mb-3">
-                                <div class="col-4">
-                                    <button class="btn btn-sm btn-outline-primary w-100" onclick="openInBrowser('safari')">
-                                        <i class="fab fa-safari me-1"></i>Safari
-                                    </button>
+                                <div class="col-6">
+                                    <div class="text-center p-2" style="background: rgba(255,255,255,0.7); border-radius: 8px;">
+                                        <i class="fab fa-apple me-1" style="color: #000;"></i>
+                                        <small class="fw-medium">iPhone</small>
+                                    </div>
                                 </div>
-                                <div class="col-4">
-                                    <button class="btn btn-sm btn-outline-success w-100" onclick="openInBrowser('chrome')">
-                                        <i class="fab fa-chrome me-1"></i>Chrome
-                                    </button>
-                                </div>
-                                <div class="col-4">
-                                    <button class="btn btn-sm btn-outline-warning w-100" onclick="copyWebsiteUrl()">
-                                        <i class="fas fa-copy me-1"></i>Copy URL
-                                    </button>
+                                <div class="col-6">
+                                    <div class="text-center p-2" style="background: rgba(255,255,255,0.7); border-radius: 8px;">
+                                        <i class="fab fa-android me-1" style="color: #3ddc84;"></i>
+                                        <small class="fw-medium">Android</small>
+                                    </div>
                                 </div>
                             </div>
-                            <p class="small text-success mb-0">
-                                <i class="fas fa-bell me-1"></i>
-                                <strong>Benefit:</strong> Get alerts instantly instead of checking manually.
+                            
+                            <!-- PRIMARY ACTION BUTTON -->
+                            <div class="d-grid mb-3">
+                                <button type="button" class="btn btn-success btn-lg fw-bold" onclick="testEmailAlert()">
+                                    <i class="fas fa-paper-plane me-2"></i>Send Test Trading Alert Now
+                                </button>
+                            </div>
+                            
+                            <div class="p-3" style="background: rgba(255,255,255,0.5); border-radius: 8px;">
+                                <h6 class="fw-semibold mb-2" style="color: #15803d;">
+                                    <i class="fas fa-magic me-1"></i>Why Email Works Best
+                                </h6>
+                                <ul class="small mb-0" style="color: #166534;">
+                                    <li><strong>Instant delivery</strong> - No browser permissions needed</li>
+                                    <li><strong>Works everywhere</strong> - Any device, any email app</li>
+                                    <li><strong>Never blocked</strong> - Goes straight to your inbox</li>
+                                    <li><strong>Mobile notifications</strong> - Email apps push to your phone</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Alternative: Future Mobile Push (Coming Soon) -->
+                        <div class="mt-3 p-3 bg-light rounded" style="border: 1px dashed #d1d5db;">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-semibold mb-0" style="color: #6b7280;">
+                                    <i class="fas fa-mobile-alt me-1"></i>Native Push Notifications
+                                </h6>
+                                <span class="badge bg-warning text-dark">Coming Soon</span>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                We're working on a simpler push notification system that won't require complex browser setup.
                             </p>
                         </div>
 
-                        <!-- Safari-specific instructions -->
-                        <div class="mt-3 p-3 bg-warning bg-opacity-10 rounded" id="safari-instructions" style="display: none;">
+                        <!-- Optional: SMS Enhancement -->
+                        <div class="mt-3 p-3 bg-success bg-opacity-10 rounded">
                             <h6 class="fw-semibold mb-2">
-                                <i class="fab fa-safari me-1"></i>Safari Setup Required
+                                <i class="fas fa-sms me-1"></i>Want SMS Alerts Too?
                             </h6>
-                            <p class="small mb-2">Safari notifications need a few extra steps:</p>
-                            <ol class="small mb-3">
-                                <li>Tap the <strong>Share</strong> button (square with arrow)</li>
-                                <li>Select <strong>"Add to Home Screen"</strong></li>
-                                <li>Open the site from your home screen</li>
-                                <li>Enable notifications when prompted</li>
-                            </ol>
-                            <p class="small text-success mb-0">
-                                <i class="fas fa-info-circle me-1"></i>
-                                This allows Safari to send notifications even when the browser is closed.
-                            </p>
+                            <p class="small mb-2">Add your phone number to also receive text message alerts:</p>
+                            <div class="input-group mb-2">
+                                <input type="tel" class="form-control" id="phone" placeholder="+1234567890" value="{{ user.phone or '' }}">
+                                <button class="btn btn-success" onclick="updatePhone()">
+                                    <i class="fas fa-save me-1"></i>Save
+                                </button>
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Your number is secure and only used for trading alerts
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -486,606 +499,213 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-                <!-- Account Info -->
-                <div class="dashboard-card mb-4">
-                    <h5 class="fw-semibold mb-3">
-                        <i class="fas fa-user me-2"></i>
-                        Account Information
-                    </h5>
-                    <div class="mb-3">
-                        <label class="small text-muted">Email</label>
-                        <div class="fw-medium">{{ user.email }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="small text-muted">Member Since</label>
-                        <div class="fw-medium">{{ user.created_at.strftime('%B %Y') }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="small text-muted">Account Type</label>
-                        <div class="fw-medium">
-                            {% if user.is_admin %}
-                                <i class="fas fa-crown me-2" style="color: #f59e0b;"></i>Administrator
-                            {% else %}
-                                <i class="fas fa-user me-2"></i>Standard User
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Quick Stats -->
-                <div class="dashboard-card mb-4">
-                    <h5 class="fw-semibold mb-3">
-                        <i class="fas fa-chart-bar me-2"></i>
-                        Quick Stats
-                    </h5>
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
-                                <div class="h5 fw-bold mb-1" style="color: #3b82f6;">24h</div>
-                                <small class="text-muted">Uptime</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
-                                <div class="h5 fw-bold mb-1" style="color: #22c55e;">{{ subscription.coins.split(',') | length if subscription and subscription.coins else 0 }}</div>
-                                <small class="text-muted">Coins</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
-                                <div class="h5 fw-bold mb-1" style="color: #8b5cf6;">Live</div>
-                                <small class="text-muted">Status</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="text-center p-3" style="background: var(--gray-50); border-radius: 12px;">
-                                <div class="h5 fw-bold mb-1" style="color: #f59e0b;">∞</div>
-                                <small class="text-muted">Signals</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Quick Actions -->
-                <div class="dashboard-card">
-                    <h5 class="fw-semibold mb-3">
-                        <i class="fas fa-bolt me-2"></i>
-                        Quick Actions
-                    </h5>
-                    <div class="d-grid gap-2">
-                        {% if not subscription %}
-                            <a href="{{ url_for('pricing') }}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Start Subscription
-                            </a>
-                        {% else %}
-                            <a href="{{ url_for('pricing') }}" class="btn btn-outline-primary">
-                                <i class="fas fa-arrow-up me-2"></i>Upgrade Plan
-                            </a>
-                        {% endif %}
-                        <button class="btn btn-outline-secondary" disabled>
-                        <button class="btn btn-outline-secondary" disabled>
-                            <i class="fas fa-download me-2"></i>Download Reports
-                            <small class="ms-2 badge bg-warning text-dark">Soon</small>
-                        </button>
-                        <button class="btn btn-outline-info">
-                            <i class="fas fa-chart-line me-2"></i>Trading Analytics
-                            <small class="ms-2 badge bg-warning text-dark">Soon</small>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        {% if subscription %}
-            <!-- Performance Metrics -->
-            <div class="row mt-5">
-                <div class="col-12">
-                    <div class="dashboard-card">
-                        <div class="d-flex align-items-center justify-content-between mb-4">
-                            <h4 class="fw-bold mb-0">
-                                <i class="fas fa-chart-area me-2"></i>
-                                Performance Overview
-                            </h4>
-                            <small class="badge bg-info">Coming Soon</small>
-                        </div>
-                        
-                        <div class="row g-4">
-                            <div class="col-lg-3 col-md-6">
-                                <div class="text-center p-4" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-radius: 16px;">
-                                    <i class="fas fa-percentage fa-2x mb-3" style="color: #3b82f6;"></i>
-                                    <div class="h3 fw-bold mb-2" style="color: #3b82f6;">73%</div>
-                                    <div class="fw-medium">Success Rate</div>
-                                    <small class="text-muted">Last 30 days</small>
-                                </div>
-                            </div>
-                            <div class="col-lg-3 col-md-6">
-                                <div class="text-center p-4" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 16px;">
-                                    <i class="fas fa-arrow-up fa-2x mb-3" style="color: #22c55e;"></i>
-                                    <div class="h3 fw-bold mb-2" style="color: #22c55e;">+24.5%</div>
-                                    <div class="fw-medium">Portfolio Growth</div>
-                                    <small class="text-muted">This month</small>
-                                </div>
-                            </div>
-                            <div class="col-lg-3 col-md-6">
-                                <div class="text-center p-4" style="background: linear-gradient(135deg, #fef7ff, #f3e8ff); border-radius: 16px;">
-                                    <i class="fas fa-bell fa-2x mb-3" style="color: #8b5cf6;"></i>
-                                    <div class="h3 fw-bold mb-2" style="color: #8b5cf6;">1,247</div>
-                                    <div class="fw-medium">Signals Sent</div>
-                                    <small class="text-muted">Total count</small>
-                                </div>
-                            </div>
-                            <div class="col-lg-3 col-md-6">
-                                <div class="text-center p-4" style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border-radius: 16px;">
-                                    <i class="fas fa-clock fa-2x mb-3" style="color: #f59e0b;"></i>
-                                    <div class="h3 fw-bold mb-2" style="color: #f59e0b;">2.3s</div>
-                                    <div class="fw-medium">Avg Response</div>
-                                    <small class="text-muted">Signal delivery</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-4 p-4" style="background: var(--gray-50); border-radius: 12px;">
-                            <div class="text-center">
-                                <i class="fas fa-chart-line fa-3x mb-3" style="color: #d1d5db;"></i>
-                                <h5 class="fw-semibold mb-2">Detailed Analytics Coming Soon</h5>
-                                <p class="text-muted mb-0">
-                                    We're working on advanced performance tracking, profit/loss analytics, and detailed trading history.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         {% endif %}
     </div>
 </section>
 
 <script>
-// Mobile-friendly push notification functions
-let pushManager = null;
-
-// Initialize notifications when page loads
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // Comprehensive browser and device detection
-    const userAgent = navigator.userAgent;
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-    const isTablet = /iPad|Android(?!.*Mobile)/i.test(userAgent);
-    const isDesktop = !isMobile && !isTablet;
-    
-    // Browser detection
-    const isChrome = /Chrome/i.test(userAgent) && !/Edg|GSA|FBAN|FBAV/i.test(userAgent);
-    const isEdge = /Edg/i.test(userAgent);
-    const isFirefox = /Firefox/i.test(userAgent);
-    const isSafari = /Safari/i.test(userAgent) && !/Chrome|Edg|GSA/i.test(userAgent);
-    const isOpera = /Opera|OPR/i.test(userAgent);
-    
-    // Special browsers and apps
-    const isGoogleApp = /GSA/i.test(userAgent);
-    const isFacebookApp = /FBAN|FBAV/i.test(userAgent);
-    const isInstagramApp = /Instagram/i.test(userAgent);
-    const isLinkedInApp = /LinkedIn/i.test(userAgent);
-    const isTwitterApp = /Twitter/i.test(userAgent);
-    const isDiscordApp = /Discord/i.test(userAgent);
-    const isWhatsAppApp = /WhatsApp/i.test(userAgent);
-    const isTelegramApp = /Telegram/i.test(userAgent);
-    const isInAppBrowser = isGoogleApp || isFacebookApp || isInstagramApp || isLinkedInApp || isTwitterApp || isDiscordApp || isWhatsAppApp || isTelegramApp;
-    
-    // Operating system detection
-    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
-    const isAndroid = /Android/i.test(userAgent);
-    const isWindows = /Windows/i.test(userAgent);
-    const isMacOS = /Macintosh|Mac OS X/i.test(userAgent);
-    const isLinux = /Linux/i.test(userAgent) && !isAndroid;
-    
-    // Feature detection
-    const hasServiceWorker = 'serviceWorker' in navigator;
-    const hasPushManager = 'PushManager' in window;
-    const hasNotifications = 'Notification' in window;
-    const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
-    
-    // Enhanced version detection for better compatibility checking
-    function getBrowserVersion() {
-        const userAgent = navigator.userAgent;
-        
-        if (isChrome) {
-            const match = userAgent.match(/Chrome\/(\d+)\.(\d+)/);
-            return match ? { major: parseInt(match[1]), minor: parseInt(match[2]), string: `${match[1]}.${match[2]}` } : null;
-        } else if (isSafari && isIOS) {
-            const match = userAgent.match(/OS (\d+)_(\d+)/);
-            return match ? { major: parseInt(match[1]), minor: parseInt(match[2]), string: `${match[1]}.${match[2]}` } : null;
-        } else if (isFirefox) {
-            const match = userAgent.match(/Firefox\/(\d+)\.(\d+)/);
-            return match ? { major: parseInt(match[1]), minor: parseInt(match[2]), string: `${match[1]}.${match[2]}` } : null;
-        } else if (isEdge) {
-            const match = userAgent.match(/Edg\/(\d+)\.(\d+)/);
-            return match ? { major: parseInt(match[1]), minor: parseInt(match[2]), string: `${match[1]}.${match[2]}` } : null;
-        }
-        
-        return null;
-    }
-    
-    const browserVersion = getBrowserVersion();
-    
-    // Minimum version requirements for notifications
-    const minVersions = {
-        chrome: 50,
-        firefox: 44,
-        edge: 79,
-        safari_ios: 16.4
-    };
-    
-    function isVersionSupported() {
-        if (!browserVersion) return false;
-        
-        if (isChrome) return browserVersion.major >= minVersions.chrome;
-        if (isFirefox) return browserVersion.major >= minVersions.firefox;
-        if (isEdge) return browserVersion.major >= minVersions.edge;
-        if (isSafari && isIOS) return parseFloat(browserVersion.string) >= minVersions.safari_ios;
-        
-        return true; // Assume supported for other browsers
-    }
-    
-    // Determine browser and device information for user guidance
-    // Determine browser and device information for user guidance
-    let deviceType = isDesktop ? 'Desktop' : isTablet ? 'Tablet' : 'Mobile';
-    let browserName = 'Unknown';
-    if (isInAppBrowser) {
-        if (isGoogleApp) browserName = 'Google Search App';
-        else if (isFacebookApp) browserName = 'Facebook App';
-        else if (isInstagramApp) browserName = 'Instagram App';
-        else if (isLinkedInApp) browserName = 'LinkedIn App';
-        else if (isTwitterApp) browserName = 'Twitter App';
-        else if (isDiscordApp) browserName = 'Discord App';
-        else if (isWhatsAppApp) browserName = 'WhatsApp App';
-        else if (isTelegramApp) browserName = 'Telegram App';
-        else browserName = 'In-App Browser';
-    } else if (isChrome) browserName = 'Chrome';
-    else if (isEdge) browserName = 'Edge';
-    else if (isFirefox) browserName = 'Firefox';
-    else if (isSafari) browserName = 'Safari';
-    else if (isOpera) browserName = 'Opera';
-    
-    // Comprehensive compatibility assessment and user guidance
-    function getCompatibilityStatus() {
-        // Check HTTPS requirement first
-        if (!isHTTPS) {
-            return {
-                compatible: false,
-                reason: 'security',
-                message: 'Secure connection required for notifications',
-                solution: 'Contact support - site needs HTTPS certificate',
-                canFix: false
-            };
-        }
-        
-        // Check for in-app browsers (most restrictive)
-        if (isInAppBrowser) {
-            let appName = 'this app';
-            let recommendedBrowser = 'Chrome or Safari';
+        // Enhanced Email Alert System with Better UX
+        function testEmailAlert() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            const originalClass = btn.className;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending Test Alert...';
             
-            if (isGoogleApp) appName = 'Google Search';
-            else if (isFacebookApp) appName = 'Facebook';
-            else if (isInstagramApp) appName = 'Instagram';
-            else if (isLinkedInApp) appName = 'LinkedIn';
-            else if (isTwitterApp) appName = 'Twitter';
-            else if (isDiscordApp) appName = 'Discord';
-            else if (isWhatsAppApp) appName = 'WhatsApp';
-            else if (isTelegramApp) appName = 'Telegram';
+            // Show immediate feedback
+            showNotification('Preparing your test trading alert...', 'info');
             
-            if (isIOS) recommendedBrowser = 'Safari';
-            else if (isAndroid) recommendedBrowser = 'Chrome';
-            
-            return {
-                compatible: false,
-                reason: 'in-app-browser',
-                message: `${appName} browser has limited features`,
-                solution: `Open this site in ${recommendedBrowser} for full functionality`,
-                canFix: true,
-                showInstructions: true
-            };
-        }
-        
-        // For modern browsers, be more permissive - try to enable notifications
-        if (hasServiceWorker && hasPushManager && hasNotifications) {
-            return {
-                compatible: true,
-                message: 'Ready to enable notifications',
-                solution: null
-            };
-        }
-        
-        // If basic features are missing, provide generic advice
-        return {
-            compatible: false,
-            reason: 'browser-compatibility',
-            message: 'Browser may not support notifications',
-            solution: 'Try updating your browser or use Chrome, Firefox, Safari, or Edge for best compatibility',
-            canFix: true
-        };
-    }
-    
-    const compatibility = getCompatibilityStatus();
-    
-    // Update UI based on compatibility
-    if (compatibility.compatible) {
-        // Everything is compatible, proceed with normal flow
-        try {
-            // Get VAPID public key from server
-            const response = await fetch('/api/push/vapid-public-key');
-            if (!response.ok) {
-                throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log('VAPID key response:', data);
-            
-            if (data.publicKey && data.publicKey !== 'dummy-public-key') {
-                // Register service worker
-                try {
-                    const swRegistration = await navigator.serviceWorker.register('/static/sw.js');
-                    console.log('Service Worker registered successfully');
-                    
-                    pushManager = {
-                        swRegistration: swRegistration,
-                        publicKey: data.publicKey,
-                        isSubscribed: false
-                    };
-                    
-                    // Check current subscription status
-                    const subscription = await swRegistration.pushManager.getSubscription();
-                    pushManager.isSubscribed = !(subscription === null);
-                    
-                    updateNotificationUI();
-                } catch (swError) {
-                    console.error('Service Worker registration failed:', swError);
-                    document.getElementById('notification-status').textContent = 'Service registration failed - try refreshing the page';
-                    document.getElementById('notification-status').className = 'status-error';
+            fetch('/api/test-email-alert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
                 }
-            } else {
-                document.getElementById('notification-status').textContent = 'Server configuration pending - notifications will be available soon';
-                document.getElementById('notification-status').className = 'status-error';
-            }
-        } catch (error) {
-            console.error('Push notification initialization error:', error);
-            document.getElementById('notification-status').textContent = 'Connection error - check your internet connection and try refreshing';
-            document.getElementById('notification-status').className = 'status-error';
-        }
-    } else {
-        // Handle incompatibility with helpful guidance
-        document.getElementById('notification-status').textContent = compatibility.message;
-        document.getElementById('notification-status').className = 'status-error';
-        
-        // Show appropriate instruction panels
-        if (compatibility.showInstructions) {
-            document.getElementById('browser-instructions').style.display = 'block';
-        }
-        
-        // Create solution panel
-        if (compatibility.solution) {
-            createSolutionPanel(compatibility);
-        }
-    }
-    
-    function createSolutionPanel(compatibility) {
-        const solutionPanel = document.createElement('div');
-        solutionPanel.className = 'mt-3 p-3 bg-primary bg-opacity-10 rounded';
-        solutionPanel.id = 'solution-panel';
-        
-        let solutionIcon = 'fas fa-tools';
-        if (compatibility.reason === 'in-app-browser') solutionIcon = 'fas fa-external-link-alt';
-        else if (compatibility.reason.includes('safari')) solutionIcon = 'fab fa-safari';
-        else if (compatibility.reason.includes('chrome')) solutionIcon = 'fab fa-chrome';
-        else if (compatibility.reason === 'security') solutionIcon = 'fas fa-shield-alt';
-        
-        solutionPanel.innerHTML = `
-            <h6 class="fw-semibold mb-2">
-                <i class="${solutionIcon} me-1"></i>How to Fix This
-            </h6>
-            <p class="small mb-2">${compatibility.solution}</p>
-            ${compatibility.canFix ? 
-                '<p class="small text-success mb-0"><i class="fas fa-check-circle me-1"></i><strong>Good news:</strong> This can be fixed easily!</p>' :
-                '<p class="small text-warning mb-0"><i class="fas fa-exclamation-triangle me-1"></i>Please contact support for assistance.</p>'
-            }
-        `;
-        
-        // Insert after the notification controls
-        const notificationControls = document.getElementById('notification-controls');
-        notificationControls.parentNode.insertBefore(solutionPanel, notificationControls.nextSibling);
-    }
-    
-    } catch (initError) {
-        document.getElementById('notification-status').textContent = 'Initialization failed - please refresh the page';
-        document.getElementById('notification-status').className = 'status-error';
-    }
-});
-
-function updateNotificationUI() {
-    const enableBtn = document.getElementById('enable-btn');
-    const disableBtn = document.getElementById('disable-btn');
-    const statusSpan = document.getElementById('notification-status');
-    
-    if (pushManager.isSubscribed) {
-        enableBtn.style.display = 'none';
-        disableBtn.style.display = 'block';
-        statusSpan.textContent = 'Instant alerts enabled - no need to check manually!';
-        statusSpan.className = 'status-success';
-    } else {
-        enableBtn.style.display = 'block';
-        disableBtn.style.display = 'none';
-        statusSpan.textContent = 'Enable alerts to avoid constant checking';
-        statusSpan.className = 'status-disabled';
-    }
-}
-
-async function enableNotifications() {
-    try {
-        const permission = await Notification.requestPermission();
-        
-        if (permission === 'granted') {
-            const subscription = await pushManager.swRegistration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(pushManager.publicKey)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Test Alert Sent Successfully!';
+                    btn.className = 'btn btn-success btn-lg fw-bold';
+                    
+                    // Show detailed success message
+                    showNotification(`
+                        <div>
+                            <strong>✅ Test Alert Sent Successfully!</strong><br>
+                            <small>Check your email: <strong>{{ user.email }}</strong></small><br>
+                            <small class="text-success">📱 Should appear as mobile notification too!</small>
+                        </div>
+                    `, 'success');
+                    
+                    // Auto-reset button after longer delay for success
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.className = originalClass;
+                        btn.disabled = false;
+                    }, 5000);
+                } else {
+                    throw new Error(data.message || 'Failed to send test alert');
+                }
+            })
+            .catch(error => {
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Send Failed - Try Again';
+                btn.className = 'btn btn-danger btn-lg fw-bold';
+                
+                showNotification(`
+                    <div>
+                        <strong>❌ Failed to send test alert</strong><br>
+                        <small>${error.message}</small><br>
+                        <small class="text-muted">Please try again in a moment</small>
+                    </div>
+                `, 'error');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.className = originalClass;
+                    btn.disabled = false;
+                }, 4000);
             });
+        }
 
-            const response = await fetch('/api/push/subscribe', {
+        // Enhanced phone update with better validation
+        function updatePhone() {
+            const phoneInput = document.getElementById('phone');
+            const phone = phoneInput.value.trim();
+            
+            if (!phone) {
+                showNotification('📞 Please enter a valid phone number for SMS alerts', 'error');
+                phoneInput.focus();
+                return;
+            }
+            
+            // Basic validation for US phone numbers
+            const phoneDigits = phone.replace(/\D/g, '');
+            if (phoneDigits.length < 10) {
+                showNotification('📞 Please enter a complete phone number (10+ digits)', 'error');
+                phoneInput.focus();
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            
+            fetch('/api/update-phone', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(subscription)
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ phone: phone })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Saved!';
+                    btn.className = 'btn btn-success';
+                    
+                    showNotification(`
+                        <div>
+                            <strong>📱 Phone Number Updated!</strong><br>
+                            <small>SMS alerts will be available soon</small><br>
+                            <small class="text-success">For now, email alerts work perfectly!</small>
+                        </div>
+                    `, 'success');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.className = 'btn btn-success';
+                        btn.disabled = false;
+                    }, 3000);
+                } else {
+                    throw new Error(data.message || 'Failed to update phone number');
+                }
+            })
+            .catch(error => {
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Error';
+                btn.className = 'btn btn-danger';
+                
+                showNotification(`
+                    <div>
+                        <strong>❌ Failed to update phone</strong><br>
+                        <small>${error.message}</small>
+                    </div>
+                `, 'error');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.className = 'btn btn-success';
+                    btn.disabled = false;
+                }, 4000);
             });
+        }
 
-            if (response.ok) {
-                pushManager.isSubscribed = true;
-                updateNotificationUI();
-                showAlert('Instant alerts enabled! No more manual checking needed.', 'success');
-            } else {
-                throw new Error('Failed to save subscription');
+        // Enhanced notification system with HTML support
+        function showNotification(message, type = 'info') {
+            // Remove any existing notifications
+            const existingNotifications = document.querySelectorAll('.custom-notification');
+            existingNotifications.forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed custom-notification`;
+            notification.style.cssText = `
+                top: 20px; 
+                right: 20px; 
+                z-index: 9999; 
+                min-width: 350px; 
+                max-width: 400px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                border: none;
+                border-radius: 12px;
+            `;
+            
+            notification.innerHTML = `
+                <div>${message}</div>
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 7 seconds for success, 5 seconds for others
+            const delay = type === 'success' ? 7000 : 5000;
+            setTimeout(() => {
+                if (notification && notification.parentNode) {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 150);
+                }
+            }, delay);
+        }
+
+        // Auto-format phone number as user types
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length > 0 && !value.startsWith('1')) {
+                        value = '1' + value;
+                    }
+                    if (value.length > 11) {
+                        value = value.slice(0, 11);
+                    }
+                    
+                    // Format: +1 (234) 567-8900
+                    if (value.length >= 1) {
+                        let formatted = '+' + value.charAt(0);
+                        if (value.length > 1) {
+                            formatted += ' (' + value.slice(1, 4);
+                        }
+                        if (value.length > 4) {
+                            formatted += ') ' + value.slice(4, 7);
+                        }
+                        if (value.length > 7) {
+                            formatted += '-' + value.slice(7, 11);
+                        }
+                        e.target.value = formatted;
+                    }
+                });
             }
-        } else {
-            showAlert('Browser permission needed', 'error');
-        }
-    } catch (error) {
-        console.error('Failed to enable notifications:', error);
-        showAlert('Failed to enable notifications', 'error');
-    }
-}
-
-async function disableNotifications() {
-    try {
-        const subscription = await pushManager.swRegistration.pushManager.getSubscription();
-        
-        if (subscription) {
-            await subscription.unsubscribe();
-            
-            const response = await fetch('/api/push/unsubscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(subscription)
-            });
-
-            if (response.ok) {
-                pushManager.isSubscribed = false;
-                updateNotificationUI();
-                showAlert('Push notifications disabled', 'info');
-            }
-        }
-    } catch (error) {
-        console.error('Failed to disable notifications:', error);
-        showAlert('Failed to disable notifications', 'error');
-    }
-}
-
-async function testNotification() {
-    try {
-        const response = await fetch('/api/push/test', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
         });
-
-        if (response.ok) {
-            showAlert('Test notification sent! Check your device.', 'success');
-        } else {
-            const data = await response.json();
-            showAlert(data.error || 'Failed to send test notification', 'error');
-        }
-    } catch (error) {
-        console.error('Test notification failed:', error);
-        showAlert('Failed to send test notification', 'error');
-    }
-}
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
-function showAlert(message, type) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}`;
-    alertDiv.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;max-width:300px;padding:10px 15px;border-radius:5px;';
-    alertDiv.textContent = message;
-    document.body.appendChild(alertDiv);
-    setTimeout(() => alertDiv.remove(), 4000);
-}
-
-function openInBrowser(browserType) {
-    const currentUrl = window.location.href;
-    
-    if (browserType === 'safari') {
-        // Try iOS Safari URL scheme
-        if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-            window.location.href = `safari://${currentUrl.replace('https://', '')}`;
-            
-            // Fallback instructions
-            setTimeout(() => {
-                showAlert('If Safari didn\'t open, try: Share button → "Open in Safari"', 'info');
-            }, 1000);
-        } else {
-            // Desktop or other platforms
-            showAlert('Please copy the URL and paste it into Safari browser', 'info');
-            copyWebsiteUrl();
-        }
-    } else if (browserType === 'chrome') {
-        // Try Chrome URL scheme
-        if (/Android/i.test(navigator.userAgent)) {
-            window.location.href = `googlechrome://${currentUrl.replace('https://', '')}`;
-            
-            setTimeout(() => {
-                showAlert('If Chrome didn\'t open, please copy the URL and open Chrome manually', 'info');
-            }, 1000);
-        } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-            window.location.href = `googlechrome://${currentUrl.replace('https://', '')}`;
-            
-            setTimeout(() => {
-                showAlert('If Chrome didn\'t open, please copy the URL and open Chrome app', 'info');
-            }, 1000);
-        } else {
-            // Desktop
-            showAlert('Please copy the URL and paste it into Chrome browser', 'info');
-            copyWebsiteUrl();
-        }
-    }
-}
-
-function openInSafari() {
-    // Legacy function - redirect to new function
-    openInBrowser('safari');
-}
-
-function copyWebsiteUrl() {
-    const currentUrl = window.location.href;
-    
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(currentUrl).then(() => {
-            showAlert('Website URL copied! Paste in Safari or Chrome app', 'success');
-        }).catch(() => {
-            showAlert('Could not copy URL', 'error');
-        });
-    } else {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = currentUrl;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            showAlert('Website URL copied! Paste in Safari or Chrome app', 'success');
-        } catch (err) {
-            showAlert('Could not copy URL', 'error');
-        }
-        document.body.removeChild(textArea);
-    }
-}
 </script>
 {% endblock %}
