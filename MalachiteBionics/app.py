@@ -97,6 +97,9 @@ class User(UserMixin, db.Model):
     email_verification_token = db.Column(db.String(100), unique=True)
     email_verification_sent_at = db.Column(db.DateTime)
     
+    # Phone number for SMS alerts (optional)
+    phone = db.Column(db.String(20), nullable=True)
+    
     # Session tracking for better persistence
     last_login = db.Column(db.DateTime)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
@@ -2048,6 +2051,174 @@ def test_push_notification():
     except Exception as e:
         logger.error(f"Error sending test push notification: {e}")
         return jsonify({'error': 'Failed to send test notification'}), 500
+
+# New Simple Email Alert System
+@app.route('/api/test-email-alert', methods=['POST'])
+@login_required
+def test_email_alert():
+    """Send a test trading alert via email - works on ALL devices"""
+    try:
+        user = current_user
+        
+        # Send test email alert
+        subject = "🚀 Trading Alert Test - MalachiteBionics"
+        html_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); padding: 20px; text-align: center; color: white;">
+                <h1 style="margin: 0; font-size: 24px;">🚀 Trading Alert Test</h1>
+                <p style="margin: 10px 0 0; opacity: 0.9;">MalachiteBionics Trading Bot</p>
+            </div>
+            
+            <div style="padding: 30px; background: #f8fafc;">
+                <h2 style="color: #1e293b; margin-top: 0;">Hi {user.display_name or user.username}!</h2>
+                
+                <p style="color: #475569; font-size: 16px; line-height: 1.6;">
+                    This is a test trading alert to confirm your email notifications are working perfectly.
+                </p>
+                
+                <div style="background: #dcfce7; border: 1px solid #16a34a; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                    <h3 style="color: #15803d; margin: 0 0 10px 0; font-size: 18px;">
+                        ✅ Email Alerts Active
+                    </h3>
+                    <p style="color: #166534; margin: 0; font-size: 14px;">
+                        You'll receive instant notifications when trading opportunities are detected.
+                        <strong>No browser setup required!</strong>
+                    </p>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{request.url_root}dashboard" 
+                       style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                        View Dashboard
+                    </a>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                
+                <p style="color: #64748b; font-size: 12px; text-align: center; margin: 0;">
+                    MalachiteBionics Trading Bot • Automated Cryptocurrency Trading
+                </p>
+            </div>
+        </div>
+        """
+        
+        msg = Message(
+            subject,
+            recipients=[user.email],
+            html=html_body
+        )
+        
+        mail.send(msg)
+        logger.info(f"Test email alert sent to user {user.username} ({user.email})")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Test alert sent to your email!'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error sending test email alert: {e}")
+        return jsonify({
+            'success': False, 
+            'message': 'Failed to send test email. Please check your email settings.'
+        }), 500
+
+@app.route('/api/update-phone', methods=['POST'])
+@login_required
+def update_phone():
+    """Update user's phone number for SMS alerts"""
+    try:
+        data = request.get_json()
+        phone = data.get('phone', '').strip()
+        
+        if not phone:
+            return jsonify({'success': False, 'message': 'Phone number is required'}), 400
+        
+        # Basic phone validation (US format)
+        import re
+        phone_clean = re.sub(r'[^\d]', '', phone)
+        if not re.match(r'^\+?1?\d{10,11}$', phone_clean):
+            return jsonify({'success': False, 'message': 'Please enter a valid US phone number'}), 400
+        
+        # Update user's phone number
+        current_user.phone = phone
+        db.session.commit()
+        
+        logger.info(f"Phone number updated for user {current_user.username}: {phone}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Phone number updated! SMS alerts will be available soon.'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating phone number: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to update phone number'
+        }), 500
+
+# Function to send trading alert emails (used by trading bot)
+def send_trading_alert_email(user, alert_type, details):
+    """Send trading alert via email - called by trading bot"""
+    try:
+        if alert_type == 'buy_signal':
+            subject = f"🟢 BUY Signal Detected - {details.get('pair', 'Unknown')}"
+            color = "#16a34a"
+            emoji = "🟢"
+        elif alert_type == 'sell_signal':
+            subject = f"🔴 SELL Signal Detected - {details.get('pair', 'Unknown')}"
+            color = "#dc2626"
+            emoji = "🔴"
+        else:
+            subject = f"📊 Trading Update - {details.get('pair', 'Unknown')}"
+            color = "#3b82f6"
+            emoji = "📊"
+        
+        html_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, {color}, #8b5cf6); padding: 20px; text-align: center; color: white;">
+                <h1 style="margin: 0; font-size: 24px;">{emoji} Trading Alert</h1>
+                <p style="margin: 10px 0 0; opacity: 0.9;">MalachiteBionics Bot • Live Signal</p>
+            </div>
+            
+            <div style="padding: 30px; background: #f8fafc;">
+                <h2 style="color: #1e293b; margin-top: 0;">Alert Details</h2>
+                
+                <div style="background: white; border-radius: 8px; padding: 20px; margin: 15px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <p style="margin: 0 0 10px 0; font-size: 16px;"><strong>Pair:</strong> {details.get('pair', 'N/A')}</p>
+                    <p style="margin: 0 0 10px 0; font-size: 16px;"><strong>Action:</strong> {alert_type.replace('_', ' ').title()}</p>
+                    <p style="margin: 0 0 10px 0; font-size: 16px;"><strong>Price:</strong> ${details.get('price', 'N/A')}</p>
+                    <p style="margin: 0; font-size: 14px; color: #64748b;"><strong>Time:</strong> {details.get('time', 'Just now')}</p>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{request.url_root}dashboard" 
+                       style="background: {color}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                        View Dashboard
+                    </a>
+                </div>
+                
+                <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                    This alert was sent instantly to your email • No complex setup required
+                </p>
+            </div>
+        </div>
+        """
+        
+        msg = Message(
+            subject,
+            recipients=[user.email],
+            html=html_body
+        )
+        
+        mail.send(msg)
+        logger.info(f"Trading alert email sent to {user.username}: {alert_type}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error sending trading alert email: {e}")
+        return False
 
 # Service Worker route with correct MIME type
 @app.route('/static/sw.js')
