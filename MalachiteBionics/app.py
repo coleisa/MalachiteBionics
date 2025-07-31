@@ -1446,18 +1446,26 @@ def login():
                             try:
                                 db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
                                 db.session.commit()
-                            except:
-                                pass
+                                logger.info("Phone column added successfully")
+                            except Exception as phone_err:
+                                if "duplicate column" not in str(phone_err).lower():
+                                    logger.warning(f"Phone column add failed: {phone_err}")
+                                else:
+                                    logger.info("Phone column already exists")
                             try:
                                 db.session.execute(text("ALTER TABLE user ADD COLUMN uuid VARCHAR(36)"))
                                 db.session.commit()
-                            except:
-                                pass
-                        logger.info("Emergency repair completed")
+                                logger.info("UUID column added successfully")
+                            except Exception as uuid_err:
+                                if "duplicate column" not in str(uuid_err).lower():
+                                    logger.warning(f"UUID column add failed: {uuid_err}")
+                                else:
+                                    logger.info("UUID column already exists")
+                        logger.info("Emergency repair completed successfully")
                         flash('Database automatically repaired. Please try logging in again.', 'success')
                     except Exception as repair_error:
                         logger.error(f"Emergency repair failed: {repair_error}")
-                        flash('Please visit /system-status for detailed diagnostics or contact support.', 'error')
+                        flash('Database repair attempted. If login still fails, visit /login-help for assistance.', 'warning')
     
     return render_template('login.html')
 
