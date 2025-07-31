@@ -135,10 +135,24 @@ class User(UserMixin, db.Model):
     
     def get_id(self):
         """Override get_id to use UUID for better session persistence"""
-        # Use UUID if available, otherwise fall back to regular ID
-        if hasattr(self, 'uuid') and self.uuid:
-            return self.uuid
-        return str(self.id)
+        try:
+            # Use UUID if available, otherwise fall back to regular ID
+            if hasattr(self, 'uuid') and self.uuid:
+                return str(self.uuid)
+            # Generate UUID if missing
+            if not hasattr(self, 'uuid') or not self.uuid:
+                self.uuid = str(uuid.uuid4())
+                try:
+                    db.session.commit()
+                except Exception as uuid_error:
+                    logger.warning(f"Failed to save UUID for user {self.id}: {uuid_error}")
+                    db.session.rollback()
+                return str(self.uuid)
+            return str(self.id)
+        except Exception as e:
+            logger.warning(f"Error in get_id for user {getattr(self, 'id', 'unknown')}: {e}")
+            # Fallback to ID-based session
+            return str(getattr(self, 'id', 'unknown'))
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -260,56 +274,110 @@ def load_user(user_uuid):
 
 # Initialize database tables
 def create_tables():
-    """Create database tables if they don't exist"""
+    """Create database tables if they don't exist and handle schema migrations"""
     try:
         with app.app_context():
-            # Force database creation and handle ArgumentError
+            logger.info("Starting database table creation/verification...")
+            
+            # Test database connection first
             try:
-                # Test if we can connect to the database
                 db.session.execute(text('SELECT 1'))
+                logger.info("Database connection successful")
             except Exception as conn_error:
-                logger.error(f"Database connection failed during table creation: {conn_error}")
-                # If connection fails, try to create the database schema
-                pass
+                logger.error(f"Database connection failed: {conn_error}")
+                # Create database file if it doesn't exist
+                try:
+                    db.create_all()
+                    logger.info("Database created from scratch")
+                except Exception as create_error:
+                    logger.error(f"Failed to create database: {create_error}")
+                    return False
             
-            # Create all tables
-            db.create_all()
-            logger.info("Database tables created/verified successfully")
-            
-            # Handle phone column migration
+            # Create all tables based on current models
             try:
-                # Check if phone column exists by trying to query it
+                db.create_all()
+                logger.info("Database tables created/updated successfully")
+            except Exception as table_error:
+                logger.error(f"Error creating tables: {table_error}")
+                return False
+            
+            # Handle specific column migrations
+            migrations_needed = []
+            
+            # Check for phone column in user table
+            try:
                 result = db.session.execute(text("SELECT phone FROM user LIMIT 1"))
-                logger.info("Phone column already exists")
+                logger.info("Phone column exists in user table")
             except Exception as e:
                 if "no such column" in str(e).lower() or "unknown column" in str(e).lower():
-                    logger.info("Adding phone column to user table")
-                    try:
-                        # Add phone column for different database types
-                        db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
-                        db.session.commit()
-                        logger.info("Phone column added successfully")
-                    except Exception as alter_error:
-                        logger.warning(f"Could not add phone column: {alter_error}")
-                        db.session.rollback()
+                    migrations_needed.append(("user", "phone", "VARCHAR(20)"))
+                    logger.info("Phone column missing - will be added")
                 else:
-                    logger.warning(f"Database check error: {e}")
+                    logger.warning(f"Error checking phone column: {e}")
             
-            # Test that tables were created properly
+            # Check for uuid column in user table
+            try:
+                result = db.session.execute(text("SELECT uuid FROM user LIMIT 1"))
+                logger.info("UUID column exists in user table")
+            except Exception as e:
+                if "no such column" in str(e).lower() or "unknown column" in str(e).lower():
+                    migrations_needed.append(("user", "uuid", "VARCHAR(36)"))
+                    logger.info("UUID column missing - will be added")
+                else:
+                    logger.warning(f"Error checking uuid column: {e}")
+            
+            # Apply migrations
+            for table, column, column_type in migrations_needed:
+                try:
+                    alter_sql = f"ALTER TABLE {table} ADD COLUMN {column} {column_type}"
+                    db.session.execute(text(alter_sql))
+                    db.session.commit()
+                    logger.info(f"Successfully added {column} column to {table} table")
+                except Exception as alter_error:
+                    logger.error(f"Failed to add {column} column to {table}: {alter_error}")
+                    db.session.rollback()
+                    # Don't fail completely, just log the error
+            
+            # Verify critical tables exist
             from sqlalchemy import inspect
-            inspector = inspect(db.engine)
-            tables = inspector.get_table_names()
-            logger.info(f"Available tables: {tables}")
-            
-            if 'user' not in tables or 'trading_alert' not in tables:
-                logger.error("Required tables were not created - forcing recreation")
-                db.drop_all()
-                db.create_all()
+            try:
+                inspector = inspect(db.engine)
+                tables = inspector.get_table_names()
+                logger.info(f"Available database tables: {tables}")
                 
+                required_tables = ['user', 'subscription', 'trading_alert']
+                missing_tables = [t for t in required_tables if t not in tables]
+                
+                if missing_tables:
+                    logger.error(f"Missing required tables: {missing_tables}")
+                    # Force recreation of all tables
+                    logger.info("Recreating all database tables...")
+                    db.drop_all()
+                    db.create_all()
+                    logger.info("Database tables recreated successfully")
+                else:
+                    logger.info("All required tables are present")
+                    
+            except Exception as inspect_error:
+                logger.error(f"Error inspecting database: {inspect_error}")
+                # Try to recreate tables as fallback
+                try:
+                    db.create_all()
+                    logger.info("Fallback table creation completed")
+                except Exception as fallback_error:
+                    logger.error(f"Fallback table creation failed: {fallback_error}")
+                    return False
+            
+            logger.info("Database initialization completed successfully")
+            return True
+            
     except Exception as e:
-        logger.error(f"Error in create_tables: {e}")
+        logger.error(f"Critical error in create_tables: {e}")
         logger.error(f"Error type: {type(e).__name__}")
-        # Don't raise the exception, let the app continue but log the error
+        # Log the full traceback for debugging
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return False
 
 # Create tables immediately but safely
 try:
@@ -597,7 +665,146 @@ def setup_database():
             'message': 'Database setup failed'
         }), 500
 
-@app.route('/init-db')
+@app.route('/system-status')
+def system_status():
+    """Comprehensive system status check for login troubleshooting"""
+    status_checks = []
+    overall_status = "healthy"
+    
+    try:
+        # Database connection test
+        try:
+            db.session.execute(text('SELECT 1'))
+            status_checks.append({"component": "Database Connection", "status": "✅ OK", "details": "Connection successful"})
+        except Exception as db_error:
+            status_checks.append({"component": "Database Connection", "status": "❌ FAILED", "details": str(db_error)})
+            overall_status = "critical"
+        
+        # User table structure test
+        try:
+            result = db.session.execute(text("SELECT id, email, password_hash FROM user LIMIT 1"))
+            status_checks.append({"component": "User Table Structure", "status": "✅ OK", "details": "Core columns accessible"})
+        except Exception as table_error:
+            status_checks.append({"component": "User Table Structure", "status": "❌ FAILED", "details": str(table_error)})
+            overall_status = "critical"
+        
+        # Phone column test
+        try:
+            db.session.execute(text("SELECT phone FROM user LIMIT 1"))
+            status_checks.append({"component": "Phone Column", "status": "✅ OK", "details": "Column exists"})
+        except Exception as phone_error:
+            if "no such column" in str(phone_error).lower():
+                status_checks.append({"component": "Phone Column", "status": "⚠️ MISSING", "details": "Phone column needs migration"})
+                overall_status = "warning" if overall_status == "healthy" else overall_status
+            else:
+                status_checks.append({"component": "Phone Column", "status": "❌ ERROR", "details": str(phone_error)})
+        
+        # UUID column test
+        try:
+            db.session.execute(text("SELECT uuid FROM user LIMIT 1"))
+            status_checks.append({"component": "UUID Column", "status": "✅ OK", "details": "Column exists"})
+        except Exception as uuid_error:
+            if "no such column" in str(uuid_error).lower():
+                status_checks.append({"component": "UUID Column", "status": "⚠️ MISSING", "details": "UUID column needs migration"})
+                overall_status = "warning" if overall_status == "healthy" else overall_status
+            else:
+                status_checks.append({"component": "UUID Column", "status": "❌ ERROR", "details": str(uuid_error)})
+        
+        # User count test
+        try:
+            user_count = User.query.count()
+            status_checks.append({"component": "User Data", "status": "✅ OK", "details": f"{user_count} users in database"})
+        except Exception as count_error:
+            status_checks.append({"component": "User Data", "status": "❌ FAILED", "details": str(count_error)})
+            overall_status = "critical"
+        
+        # Flask-Login configuration
+        login_manager_configured = hasattr(app, 'login_manager') and app.login_manager is not None
+        if login_manager_configured:
+            status_checks.append({"component": "Flask-Login", "status": "✅ OK", "details": "Login manager configured"})
+        else:
+            status_checks.append({"component": "Flask-Login", "status": "❌ FAILED", "details": "Login manager not configured"})
+            overall_status = "critical"
+        
+        # Generate HTML report
+        status_color = {
+            "healthy": "#28a745",
+            "warning": "#ffc107", 
+            "critical": "#dc3545"
+        }
+        
+        html_report = f"""
+        <html>
+        <head>
+            <title>System Status Report</title>
+            <meta http-equiv="refresh" content="30">
+        </head>
+        <body style="font-family: Arial, sans-serif; margin: 40px; background-color: #f8f9fa;">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <h1 style="color: {status_color[overall_status]};">🔍 System Status Report</h1>
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                    <h2 style="margin-top: 0;">Overall Status: <span style="color: {status_color[overall_status]};">{overall_status.upper()}</span></h2>
+                    <p style="color: #666;">Last updated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC</p>
+                </div>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <h3>Component Status:</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #f8f9fa;">
+                                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #dee2e6;">Component</th>
+                                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #dee2e6;">Status</th>
+                                <th style="text-align: left; padding: 12px; border-bottom: 1px solid #dee2e6;">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {"".join(f'''
+                            <tr>
+                                <td style="padding: 12px; border-bottom: 1px solid #dee2e6;">{check["component"]}</td>
+                                <td style="padding: 12px; border-bottom: 1px solid #dee2e6;">{check["status"]}</td>
+                                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; font-family: monospace; font-size: 12px;">{check["details"]}</td>
+                            </tr>
+                            ''' for check in status_checks)}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px;">
+                    <h3>Quick Actions:</h3>
+                    <p>
+                        <a href="/admin/fix-database" style="background: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; margin-right: 10px;">🔧 Fix Database</a>
+                        <a href="/login" style="background: #28a745; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; margin-right: 10px;">🔐 Try Login</a>
+                        <a href="/emergency-db-reset" style="background: #dc3545; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px;" onclick="return confirm('This will delete ALL data! Are you sure?')">⚠️ Emergency Reset</a>
+                    </p>
+                </div>
+                
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin-top: 20px;">
+                    <h4 style="margin-top: 0; color: #856404;">💡 Troubleshooting Tips:</h4>
+                    <ul style="color: #856404;">
+                        <li>If you see missing column errors, use the "Fix Database" button</li>
+                        <li>For persistent login issues, check the system logs</li>
+                        <li>Emergency reset should only be used as a last resort</li>
+                        <li>This page auto-refreshes every 30 seconds</li>
+                    </ul>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html_report
+        
+    except Exception as e:
+        logger.error(f"System status check failed: {e}")
+        return f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; margin: 40px;">
+            <h1 style="color: red;">❌ System Status Check Failed</h1>
+            <p><strong>Error:</strong> {e}</p>
+            <p><a href="/login">Return to Login</a></p>
+        </body>
+        </html>
+        """@app.route('/init-db')
 def init_database():
     """Manual database initialization endpoint"""
     try:
@@ -841,8 +1048,21 @@ def login():
             return render_template('login.html')
         
         try:
-            # First, test if we can connect to the database
-            db.session.execute(text('SELECT 1'))
+            # First, test database connection and schema
+            try:
+                db.session.execute(text('SELECT 1'))
+                # Test if User table has all required columns
+                db.session.execute(text('SELECT id, email, password_hash FROM user LIMIT 1'))
+            except Exception as db_error:
+                logger.error(f"Database connection/schema error: {db_error}")
+                # Try to fix schema issues automatically
+                try:
+                    create_tables()  # This will handle missing columns
+                    logger.info("Database schema updated during login")
+                except Exception as fix_error:
+                    logger.error(f"Failed to fix database schema: {fix_error}")
+                    flash('Database is being updated. Please try again in a moment.', 'warning')
+                    return render_template('login.html')
             
             user = User.query.filter_by(email=email).first()
             
@@ -851,6 +1071,17 @@ def login():
                 if not user.is_admin and hasattr(user, 'email_verified') and not user.email_verified:
                     flash('Please verify your email before logging in. Check your inbox for the verification link.', 'warning')
                     return render_template('login.html')
+                
+                # Update user login tracking
+                try:
+                    user.last_login = datetime.utcnow()
+                    user.login_count = (user.login_count or 0) + 1
+                    user.update_last_seen()
+                    db.session.commit()
+                except Exception as update_error:
+                    logger.warning(f"Failed to update login tracking: {update_error}")
+                    # Don't fail login for tracking issues
+                    db.session.rollback()
                 
                 # Use remember checkbox value, default to extended session
                 remember_user = bool(remember) if remember else True
@@ -866,24 +1097,28 @@ def login():
         except Exception as e:
             error_msg = str(e)
             logger.error(f"Login error details: {error_msg}")
+            logger.error(f"Login error type: {type(e).__name__}")
             
-            # More specific error handling
+            # Comprehensive error handling with automatic recovery
             if "no such column" in error_msg.lower() or "unknown column" in error_msg.lower():
-                logger.error("Database schema issue detected - phone column missing")
-                flash('System is updating database schema. Please try again in a moment.', 'warning')
-                # Try to fix the database issue
+                logger.error("Database schema issue detected - attempting automatic fix")
                 try:
-                    db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
-                    db.session.commit()
-                    logger.info("Phone column added during login error recovery")
-                except:
-                    pass
+                    # Force database schema update
+                    create_tables()
+                    flash('Database schema updated. Please try logging in again.', 'info')
+                except Exception as schema_fix_error:
+                    logger.error(f"Schema fix failed: {schema_fix_error}")
+                    flash('Database schema issue detected. Please contact support.', 'error')
             elif "database is locked" in error_msg.lower():
-                flash('Database is temporarily busy. Please try again.', 'warning')
-            elif "connection" in error_msg.lower():
-                flash('Database connection issue. Please try again.', 'error')
+                flash('Database is temporarily busy. Please try again in a few seconds.', 'warning')
+            elif "connection" in error_msg.lower() or "operational error" in error_msg.lower():
+                flash('Database connection issue. Please try again.', 'warning')
+            elif "integrity error" in error_msg.lower():
+                flash('Data integrity issue. Please try again or contact support.', 'error')
             else:
-                flash('Login failed due to a system error. Please try again.', 'error')
+                # Generic error with more helpful message
+                flash('Login system is experiencing issues. Please try again or contact support if the problem persists.', 'error')
+                logger.error(f"Unhandled login error: {error_msg}")
     
     return render_template('login.html')
 
@@ -2264,19 +2499,190 @@ def send_trading_alert_email(user, alert_type, details):
 def fix_database():
     """Admin route to fix database schema issues"""
     try:
+        logger.info("Manual database fix initiated")
+        
+        # Comprehensive database repair
+        repair_results = []
+        
         with app.app_context():
-            # Try to add phone column if it doesn't exist
+            # Step 1: Test basic connection
             try:
-                db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
-                db.session.commit()
-                return "Phone column added successfully"
-            except Exception as e:
-                if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
-                    return "Phone column already exists - database is OK"
+                db.session.execute(text('SELECT 1'))
+                repair_results.append("✅ Database connection: OK")
+            except Exception as conn_error:
+                repair_results.append(f"❌ Database connection failed: {conn_error}")
+                return f"Database repair failed - connection issue: {conn_error}"
+            
+            # Step 2: Check if tables exist
+            try:
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                tables = inspector.get_table_names()
+                repair_results.append(f"✅ Existing tables: {', '.join(tables) if tables else 'None'}")
+            except Exception as inspect_error:
+                repair_results.append(f"❌ Table inspection failed: {inspect_error}")
+            
+            # Step 3: Force table recreation
+            try:
+                db.create_all()
+                repair_results.append("✅ Tables created/updated")
+            except Exception as create_error:
+                repair_results.append(f"❌ Table creation failed: {create_error}")
+            
+            # Step 4: Add missing columns
+            column_fixes = []
+            
+            # Check and add phone column
+            try:
+                db.session.execute(text("SELECT phone FROM user LIMIT 1"))
+                column_fixes.append("✅ Phone column: exists")
+            except Exception:
+                try:
+                    db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
+                    db.session.commit()
+                    column_fixes.append("✅ Phone column: added")
+                except Exception as phone_error:
+                    if "duplicate column" in str(phone_error).lower():
+                        column_fixes.append("✅ Phone column: already exists")
+                    else:
+                        column_fixes.append(f"❌ Phone column: failed to add ({phone_error})")
+            
+            # Check and add uuid column
+            try:
+                db.session.execute(text("SELECT uuid FROM user LIMIT 1"))
+                column_fixes.append("✅ UUID column: exists")
+            except Exception:
+                try:
+                    db.session.execute(text("ALTER TABLE user ADD COLUMN uuid VARCHAR(36)"))
+                    db.session.commit()
+                    column_fixes.append("✅ UUID column: added")
+                except Exception as uuid_error:
+                    if "duplicate column" in str(uuid_error).lower():
+                        column_fixes.append("✅ UUID column: already exists")
+                    else:
+                        column_fixes.append(f"❌ UUID column: failed to add ({uuid_error})")
+            
+            # Step 5: Test user table structure
+            try:
+                result = db.session.execute(text("SELECT id, email, password_hash FROM user LIMIT 1"))
+                repair_results.append("✅ User table structure: OK")
+            except Exception as struct_error:
+                repair_results.append(f"❌ User table structure issue: {struct_error}")
+            
+            # Step 6: Final verification
+            try:
+                if create_tables():
+                    repair_results.append("✅ Final database verification: PASSED")
                 else:
-                    return f"Database fix attempt failed: {e}"
+                    repair_results.append("❌ Final database verification: FAILED")
+            except Exception as verify_error:
+                repair_results.append(f"❌ Final verification error: {verify_error}")
+            
+            # Generate comprehensive report
+            report = f"""
+            <html>
+            <head><title>Database Repair Report</title></head>
+            <body style="font-family: Arial, sans-serif; margin: 40px;">
+                <h1 style="color: #333;">🔧 Database Repair Report</h1>
+                <h2 style="color: #666;">Basic Checks:</h2>
+                <ul>
+                    {"".join(f"<li>{result}</li>" for result in repair_results)}
+                </ul>
+                <h2 style="color: #666;">Column Migrations:</h2>
+                <ul>
+                    {"".join(f"<li>{fix}</li>" for fix in column_fixes)}
+                </ul>
+                <h2 style="color: #666;">Next Steps:</h2>
+                <p>1. Try logging in again</p>
+                <p>2. If issues persist, contact support with this report</p>
+                <p>3. <a href="/login">Return to Login Page</a></p>
+                <hr>
+                <p style="color: #999; font-size: 12px;">
+                    Report generated on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC
+                </p>
+            </body>
+            </html>
+            """
+            
+            logger.info("Database repair completed")
+            return report
+            
     except Exception as e:
-        return f"Database fix error: {e}"
+        error_msg = f"Database repair critical error: {e}"
+        logger.error(error_msg)
+        return f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; margin: 40px;">
+            <h1 style="color: red;">❌ Database Repair Failed</h1>
+            <p><strong>Error:</strong> {error_msg}</p>
+            <p><a href="/login">Return to Login Page</a></p>
+            <p>Please contact support if this error persists.</p>
+        </body>
+        </html>
+        """
+
+@app.route('/emergency-db-reset')
+def emergency_database_reset():
+    """Emergency route to completely reset the database - USE WITH CAUTION"""
+    try:
+        logger.warning("EMERGENCY DATABASE RESET INITIATED")
+        
+        with app.app_context():
+            # Drop all tables
+            db.drop_all()
+            logger.info("All tables dropped")
+            
+            # Recreate all tables
+            db.create_all()
+            logger.info("All tables recreated")
+            
+            # Create admin user
+            admin_email = "malachitebionics@gmail.com"
+            existing_admin = User.query.filter_by(email=admin_email).first()
+            
+            if not existing_admin:
+                admin_user = User(
+                    email=admin_email,
+                    display_name="Admin",
+                    is_admin=True,
+                    email_verified=True,
+                    is_active=True
+                )
+                admin_user.set_password("admin123")  # Default password - CHANGE IMMEDIATELY
+                db.session.add(admin_user)
+                db.session.commit()
+                logger.info("Admin user created with default password")
+            
+            return f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; margin: 40px;">
+                <h1 style="color: orange;">⚠️ Emergency Database Reset Complete</h1>
+                <p><strong>Database has been completely reset!</strong></p>
+                <p>Admin account created:</p>
+                <ul>
+                    <li>Email: {admin_email}</li>
+                    <li>Password: admin123 (CHANGE IMMEDIATELY)</li>
+                </ul>
+                <p><a href="/login" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a></p>
+                <p style="color: red; font-size: 14px;">
+                    <strong>WARNING:</strong> All user data has been lost. This should only be used in emergency situations.
+                </p>
+            </body>
+            </html>
+            """
+            
+    except Exception as e:
+        error_msg = f"Emergency reset failed: {e}"
+        logger.error(error_msg)
+        return f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; margin: 40px;">
+            <h1 style="color: red;">❌ Emergency Reset Failed</h1>
+            <p><strong>Error:</strong> {error_msg}</p>
+            <p>Please contact technical support immediately.</p>
+        </body>
+        </html>
+        """
 
 # Service Worker route with correct MIME type
 @app.route('/static/sw.js')
