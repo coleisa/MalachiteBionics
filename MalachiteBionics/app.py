@@ -276,6 +276,25 @@ def create_tables():
             db.create_all()
             logger.info("Database tables created/verified successfully")
             
+            # Handle phone column migration
+            try:
+                # Check if phone column exists by trying to query it
+                result = db.session.execute(text("SELECT phone FROM user LIMIT 1"))
+                logger.info("Phone column already exists")
+            except Exception as e:
+                if "no such column" in str(e).lower() or "unknown column" in str(e).lower():
+                    logger.info("Adding phone column to user table")
+                    try:
+                        # Add phone column for different database types
+                        db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
+                        db.session.commit()
+                        logger.info("Phone column added successfully")
+                    except Exception as alter_error:
+                        logger.warning(f"Could not add phone column: {alter_error}")
+                        db.session.rollback()
+                else:
+                    logger.warning(f"Database check error: {e}")
+            
             # Test that tables were created properly
             from sqlalchemy import inspect
             inspector = inspect(db.engine)
@@ -822,6 +841,9 @@ def login():
             return render_template('login.html')
         
         try:
+            # First, test if we can connect to the database
+            db.session.execute(text('SELECT 1'))
+            
             user = User.query.filter_by(email=email).first()
             
             if user and user.check_password(password):
@@ -842,8 +864,26 @@ def login():
                 logger.warning(f"Failed login attempt for email: {email}")
                 
         except Exception as e:
-            logger.error(f"Login error: {e}")
-            flash('Login failed due to a system error. Please try again.', 'error')
+            error_msg = str(e)
+            logger.error(f"Login error details: {error_msg}")
+            
+            # More specific error handling
+            if "no such column" in error_msg.lower() or "unknown column" in error_msg.lower():
+                logger.error("Database schema issue detected - phone column missing")
+                flash('System is updating database schema. Please try again in a moment.', 'warning')
+                # Try to fix the database issue
+                try:
+                    db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
+                    db.session.commit()
+                    logger.info("Phone column added during login error recovery")
+                except:
+                    pass
+            elif "database is locked" in error_msg.lower():
+                flash('Database is temporarily busy. Please try again.', 'warning')
+            elif "connection" in error_msg.lower():
+                flash('Database connection issue. Please try again.', 'error')
+            else:
+                flash('Login failed due to a system error. Please try again.', 'error')
     
     return render_template('login.html')
 
@@ -2219,6 +2259,24 @@ def send_trading_alert_email(user, alert_type, details):
     except Exception as e:
         logger.error(f"Error sending trading alert email: {e}")
         return False
+
+@app.route('/admin/fix-database')
+def fix_database():
+    """Admin route to fix database schema issues"""
+    try:
+        with app.app_context():
+            # Try to add phone column if it doesn't exist
+            try:
+                db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
+                db.session.commit()
+                return "Phone column added successfully"
+            except Exception as e:
+                if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+                    return "Phone column already exists - database is OK"
+                else:
+                    return f"Database fix attempt failed: {e}"
+    except Exception as e:
+        return f"Database fix error: {e}"
 
 # Service Worker route with correct MIME type
 @app.route('/static/sw.js')
