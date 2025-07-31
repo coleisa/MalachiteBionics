@@ -11,8 +11,21 @@ import logging
 import secrets
 import json
 import uuid
+import re
 from dotenv import load_dotenv
-from push_notifications import PushNotificationService
+
+# Safe import for push notifications
+try:
+    from push_notifications import PushNotificationService
+except ImportError:
+    # Fallback class if push_notifications module is missing
+    class PushNotificationService:
+        def __init__(self):
+            pass
+        def get_vapid_public_key(self):
+            return "not-configured"
+        def send_trading_alert_notification(self, **kwargs):
+            return False
 
 # Load environment variables
 load_dotenv()
@@ -1447,7 +1460,7 @@ def simple_login():
                 <p><button type="submit" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 4px;">Login</button></p>
             </form>
             <hr>
-            <p><a href="/register">Need an account? Register here</a></p>
+            <p><a href="/simple-register">Need an account? Register here</a></p>
             <p><a href="/emergency-db-reset" style="color: red;">Emergency: Reset Database</a></p>
         </div>
     </body>
@@ -2677,7 +2690,7 @@ def test_email_alert():
             </div>
             
             <div style="padding: 30px; background: #f8fafc;">
-                <h2 style="color: #1e293b; margin-top: 0;">Hi {user.display_name or user.username}!</h2>
+                <h2 style="color: #1e293b; margin-top: 0;">Hi {user.display_name or user.email}!</h2>
                 
                 <p style="color: #475569; font-size: 16px; line-height: 1.6;">
                     This is a test trading alert to confirm your email notifications are working perfectly.
@@ -2716,7 +2729,7 @@ def test_email_alert():
         )
         
         mail.send(msg)
-        logger.info(f"Test email alert sent to user {user.username} ({user.email})")
+        logger.info(f"Test email alert sent to user {user.email}")
         
         return jsonify({
             'success': True, 
@@ -2820,7 +2833,7 @@ def send_trading_alert_email(user, alert_type, details):
         )
         
         mail.send(msg)
-        logger.info(f"Trading alert email sent to {user.username}: {alert_type}")
+        logger.info(f"Trading alert email sent to {user.email}: {alert_type}")
         return True
         
     except Exception as e:
