@@ -1269,45 +1269,56 @@ def fix_database():
         fixes_applied = []
         errors = []
         
+        # CRITICAL: Start with fresh transaction
+        db.session.rollback()
+        
         # Step 1: Create all tables
         try:
             db.create_all()
             fixes_applied.append("✅ Database tables created/verified")
         except Exception as e:
+            db.session.rollback()
             errors.append(f"❌ Table creation failed: {e}")
         
         # Step 2: Fix missing UUID column
         try:
+            db.session.rollback()  # Fresh transaction
             db.session.execute(text("SELECT uuid FROM user LIMIT 1"))
             fixes_applied.append("✅ UUID column exists")
         except:
             try:
+                db.session.rollback()  # Rollback failed SELECT
                 db.session.execute(text("ALTER TABLE user ADD COLUMN uuid VARCHAR(36)"))
                 db.session.commit()
                 fixes_applied.append("✅ UUID column added successfully")
             except Exception as e:
-                if "duplicate" not in str(e).lower():
+                db.session.rollback()
+                if "duplicate" not in str(e).lower() and "already exists" not in str(e).lower():
                     errors.append(f"❌ UUID column fix failed: {e}")
                 else:
                     fixes_applied.append("✅ UUID column already exists")
         
         # Step 3: Fix missing phone column
         try:
+            db.session.rollback()  # Fresh transaction
             db.session.execute(text("SELECT phone FROM user LIMIT 1"))
             fixes_applied.append("✅ Phone column exists")
         except:
             try:
+                db.session.rollback()  # Rollback failed SELECT
                 db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
                 db.session.commit()
                 fixes_applied.append("✅ Phone column added successfully")
             except Exception as e:
-                if "duplicate" not in str(e).lower():
+                db.session.rollback()
+                if "duplicate" not in str(e).lower() and "already exists" not in str(e).lower():
                     errors.append(f"❌ Phone column fix failed: {e}")
                 else:
                     fixes_applied.append("✅ Phone column already exists")
         
         # Step 4: Generate UUIDs for existing users without them
         try:
+            db.session.rollback()  # Fresh transaction
             users_without_uuid = User.query.filter(User.uuid.is_(None)).all()
             for user in users_without_uuid:
                 user.uuid = str(uuid.uuid4())
@@ -1317,10 +1328,12 @@ def fix_database():
             else:
                 fixes_applied.append("✅ All users have UUIDs")
         except Exception as e:
+            db.session.rollback()
             errors.append(f"❌ UUID generation failed: {e}")
         
         # Step 5: Verify admin account
         try:
+            db.session.rollback()  # Fresh transaction
             admin_user = User.query.filter_by(email='malachitebionics@gmail.com').first()
             if admin_user:
                 admin_user.is_admin = True
@@ -1332,15 +1345,18 @@ def fix_database():
             else:
                 fixes_applied.append("⚠️ Admin account not found (needs to be registered)")
         except Exception as e:
+            db.session.rollback()
             errors.append(f"❌ Admin account fix failed: {e}")
         
         # Step 6: Test database functionality
         try:
+            db.session.rollback()  # Fresh transaction
             user_count = User.query.count()
             subscription_count = Subscription.query.count()
             alert_count = TradingAlert.query.count()
             fixes_applied.append(f"✅ Database functional - {user_count} users, {subscription_count} subscriptions, {alert_count} alerts")
         except Exception as e:
+            db.session.rollback()
             errors.append(f"❌ Database functionality test failed: {e}")
         
         # Generate HTML response
@@ -1458,6 +1474,37 @@ def make_admin():
     except Exception as e:
         logger.error(f"Make admin error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/reset-transaction')
+def reset_transaction():
+    """Emergency route to reset PostgreSQL transaction state"""
+    try:
+        # Force rollback any failed transaction
+        db.session.rollback()
+        
+        # Test if transaction state is recovered
+        test_result = db.session.execute(text('SELECT 1')).scalar()
+        
+        if test_result == 1:
+            return jsonify({
+                'success': True,
+                'message': 'Transaction state reset successfully',
+                'recommendation': 'You can now try logging in again'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Transaction reset failed',
+                'recommendation': 'Please restart the application'
+            })
+            
+    except Exception as e:
+        logger.error(f"Transaction reset error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'recommendation': 'Please restart the Flask application'
+        }), 500
 
 @app.route('/emergency-db-reset')
 def emergency_db_reset():
@@ -1745,6 +1792,9 @@ def login():
             return render_template('login.html')
         
         try:
+            # CRITICAL: Rollback any existing failed transaction first
+            db.session.rollback()
+            
             # Ensure database tables exist first
             db.create_all()
             
@@ -1754,22 +1804,29 @@ def login():
                 db.session.execute(text("SELECT uuid FROM user LIMIT 1"))
             except:
                 try:
+                    db.session.rollback()  # Rollback failed SELECT
                     db.session.execute(text("ALTER TABLE user ADD COLUMN uuid VARCHAR(36)"))
                     db.session.commit()
                     logger.info("Added missing UUID column")
-                except:
-                    pass  # Column might already exist
+                except Exception as uuid_error:
+                    db.session.rollback()
+                    logger.warning(f"Could not add UUID column: {uuid_error}")
             
             try:
                 # Test for phone column
                 db.session.execute(text("SELECT phone FROM user LIMIT 1"))
             except:
                 try:
+                    db.session.rollback()  # Rollback failed SELECT
                     db.session.execute(text("ALTER TABLE user ADD COLUMN phone VARCHAR(20)"))
                     db.session.commit()
                     logger.info("Added missing phone column")
-                except:
-                    pass  # Column might already exist
+                except Exception as phone_error:
+                    db.session.rollback()
+                    logger.warning(f"Could not add phone column: {phone_error}")
+            
+            # Fresh transaction for user lookup
+            db.session.rollback()
             
             # Simple, direct login - no complex error handling
             user = User.query.filter_by(email=email).first()
@@ -1784,20 +1841,21 @@ def login():
                     try:
                         db.session.commit()
                         logger.info(f"Generated UUID for user {user.email}: {user.uuid}")
-                    except:
-                        # If commit fails, just log but continue
-                        logger.warning(f"Failed to save UUID for user {user.email}")
+                    except Exception as uuid_commit_error:
+                        # If commit fails, rollback and continue
+                        db.session.rollback()
+                        logger.warning(f"Failed to save UUID for user {user.email}: {uuid_commit_error}")
                 
-                # Update login tracking
-                user.last_login = datetime.utcnow()
-                user.login_count = (user.login_count or 0) + 1
-                user.update_last_seen()
-                
+                # Update login tracking in a separate transaction
                 try:
+                    user.last_login = datetime.utcnow()
+                    user.login_count = (user.login_count or 0) + 1
+                    user.update_last_seen()
                     db.session.commit()
-                except:
+                except Exception as stats_error:
                     # Don't fail login if we can't update stats
-                    logger.warning("Failed to update login stats")
+                    db.session.rollback()
+                    logger.warning(f"Failed to update login stats: {stats_error}")
                 
                 login_user(user, remember=True, duration=timedelta(days=30))
                 logger.info(f"User {user.email} logged in successfully")
@@ -1811,10 +1869,19 @@ def login():
                 logger.warning(f"Failed login attempt for {email}")
                 
         except Exception as e:
+            # CRITICAL: Always rollback on any error
+            db.session.rollback()
             logger.error(f"Login error: {e}")
             logger.error(f"Login error traceback: {traceback.format_exc()}")
-            # Show more specific error message
-            flash(f'Login system error: {str(e)}. Please try the simple login or contact support.', 'error')
+            
+            # Check if it's a transaction error
+            if "transaction is aborted" in str(e).lower() or "InFailedSqlTransaction" in str(e):
+                flash('Database transaction error. Please try again.', 'warning')
+            elif "relation" in str(e).lower() or "table" in str(e).lower():
+                flash('Database schema error. Please visit /admin/fix-database to repair.', 'error')
+            else:
+                # Show more specific error message
+                flash(f'Login system error. Please try the simple login or contact support.', 'error')
     
     return render_template('login.html')
 
