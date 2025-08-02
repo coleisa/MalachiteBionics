@@ -12,6 +12,7 @@ import secrets
 import json
 import uuid
 import re
+import traceback
 from dotenv import load_dotenv
 
 # Safe import for push notifications
@@ -87,14 +88,19 @@ login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
 login_manager.session_protection = 'basic'  # Changed from 'strong' to 'basic' to prevent logouts on refresh
 
-# Initialize push notification service
-push_service = PushNotificationService()
+# Initialize push notification service (safe)
+try:
+    push_service = PushNotificationService()
+except Exception as push_error:
+    logger.warning(f"Push service initialization failed: {push_error}")
+    push_service = PushNotificationService()  # Use fallback class
+
 login_manager.remember_cookie_duration = timedelta(days=30)
 
-# Configure Stripe
-stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
-STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
-STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+# Configure Stripe (with safe fallbacks)
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_fallback')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_fallback')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', 'whsec_fallback')
 
 # User model
 class User(UserMixin, db.Model):
@@ -543,27 +549,115 @@ def from_json_filter(json_str):
 # Routes
 @app.route('/')
 def index():
-    return render_template('index.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
+    try:
+        stripe_key = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_fallback')
+        return render_template('index.html', stripe_publishable_key=stripe_key)
+    except Exception as e:
+        # Fallback if template fails
+        return f"""
+        <html>
+        <body style="font-family: Arial; margin: 40px;">
+            <h1>🚀 MalachiteBionics Trading Bot</h1>
+            <p>Template error: {e}</p>
+            <h2>Quick Actions:</h2>
+            <ul>
+                <li><a href="/simple-login">Simple Login</a></li>
+                <li><a href="/simple-register">Simple Register</a></li>
+                <li><a href="/emergency-db-reset">Emergency Database Reset</a></li>
+                <li><a href="/debug">Debug Info</a></li>
+            </ul>
+        </body>
+        </html>
+        """
+
+@app.route('/minimal-test')
+def minimal_test():
+    """Absolutely minimal test - just return plain text"""
+    return "SERVER IS WORKING! Click links: <a href='/test'>Test</a> | <a href='/debug'>Debug</a> | <a href='/simple-login'>Login</a> | <a href='/simple-register'>Register</a>"
+
+@app.route('/admin-debug')
+def admin_debug():
+    """Debug admin account and fix UUID issues"""
+    try:
+        admin_user = User.query.filter_by(email='malachitebionics@gmail.com').first()
+        if not admin_user:
+            return "Admin user not found. <a href='/make-admin'>Create admin</a>"
+        
+        # Fix UUID if missing
+        if not admin_user.uuid:
+            admin_user.uuid = str(uuid.uuid4())
+            db.session.commit()
+        
+        info = {
+            'id': admin_user.id,
+            'uuid': admin_user.uuid,
+            'email': admin_user.email,
+            'is_admin': admin_user.is_admin,
+            'email_verified': admin_user.email_verified,
+            'is_active': admin_user.is_active,
+            'has_password': bool(admin_user.password_hash)
+        }
+        
+        return f"Admin Debug Info: {info}<br><a href='/simple-login'>Try Login</a>"
+        
+    except Exception as e:
+        return f"Error: {e}"
+
+@app.route('/test')
+def test_route():
+    """Ultra-simple test route"""
+    return "✅ Server is working! <a href='/debug'>Debug info</a> | <a href='/simple-login'>Login</a>"
+
+@app.route('/debug')
+def debug_route():
+    """Simple debug route to identify issues"""
+    try:
+        debug_info = {
+            'flask': 'working',
+            'time': str(datetime.utcnow()),
+            'os_env_count': len(os.environ),
+            'database_uri': app.config.get('SQLALCHEMY_DATABASE_URI', 'not set')[:50] + '...',
+        }
+        
+        # Test database
+        try:
+            db.session.execute(text('SELECT 1'))
+            debug_info['database'] = 'connected'
+        except Exception as db_err:
+            debug_info['database'] = f'error: {str(db_err)}'
+        
+        return f"""
+        <html>
+        <body style="font-family: Arial; margin: 40px;">
+            <h1>🔍 Server Debug</h1>
+            <h2>Status:</h2>
+            <pre>{json.dumps(debug_info, indent=2)}</pre>
+            <h2>Quick Actions:</h2>
+            <ul>
+                <li><a href="/simple-login">Try Simple Login</a></li>
+                <li><a href="/simple-register">Try Simple Register</a></li>
+                <li><a href="/emergency-db-reset" style="color: red;">Emergency DB Reset</a></li>
+            </ul>
+        </body>
+        </html>
+        """
+    except Exception as e:
+        return f"Debug error: {str(e)}", 500
 
 @app.route('/health')
 def health_check():
     """Health check endpoint for Railway"""
     try:
-        # Test database connection
-        db.session.execute(text('SELECT 1'))
-        
-        # Check if users exist
-        user_count = User.query.count()
-        
         return jsonify({
-            'status': 'healthy', 
-            'database': 'connected',
-            'users_count': user_count,
-            'database_url_type': 'postgresql' if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite'
+            'status': 'healthy',
+            'time': datetime.utcnow().isoformat(),
+            'flask': 'working'
         }), 200
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
 
 @app.route('/test-db')
 def test_database():
@@ -1115,7 +1209,9 @@ def system_status():
             <p><a href="/login">Return to Login</a></p>
         </body>
         </html>
-        """@app.route('/init-db')
+        """
+
+@app.route('/init-db')
 def init_database():
     """Manual database initialization endpoint"""
     try:
@@ -1410,11 +1506,21 @@ def login():
             
             if user and user.check_password(password):
                 # Skip email verification for now to get login working
+                logger.info(f"Login attempt for {user.email}: password correct")
+                
+                # Ensure user has UUID for session management
+                if not user.uuid:
+                    user.uuid = str(uuid.uuid4())
+                    db.session.commit()
+                    logger.info(f"Generated UUID for user {user.email}: {user.uuid}")
+                
                 login_user(user, remember=True, duration=timedelta(days=30))
-                logger.info(f"User {user.email} logged in successfully")
+                logger.info(f"User {user.email} logged in successfully with UUID {user.uuid}")
                 
                 next_page = request.args.get('next')
-                return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+                redirect_url = next_page if next_page else url_for('dashboard')
+                logger.info(f"Redirecting to: {redirect_url}")
+                return redirect(redirect_url)
             else:
                 flash('Invalid email or password.', 'error')
                 
@@ -2973,42 +3079,57 @@ def emergency_database_reset():
         logger.warning("EMERGENCY DATABASE RESET INITIATED")
         
         with app.app_context():
-            # Drop all tables
-            db.drop_all()
-            logger.info("All tables dropped")
+            try:
+                # Drop all tables
+                db.drop_all()
+                logger.info("All tables dropped")
+            except Exception as drop_error:
+                logger.error(f"Drop tables failed: {drop_error}")
             
-            # Recreate all tables
-            db.create_all()
-            logger.info("All tables recreated")
+            try:
+                # Recreate all tables
+                db.create_all()
+                logger.info("All tables recreated")
+            except Exception as create_error:
+                logger.error(f"Create tables failed: {create_error}")
+                return f"Table creation failed: {create_error}", 500
             
             # Create admin user
             admin_email = "malachitebionics@gmail.com"
-            existing_admin = User.query.filter_by(email=admin_email).first()
-            
-            if not existing_admin:
-                admin_user = User(
-                    email=admin_email,
-                    display_name="Admin",
-                    is_admin=True,
-                    email_verified=True,
-                    is_active=True
-                )
-                admin_user.set_password("admin123")  # Default password - CHANGE IMMEDIATELY
-                db.session.add(admin_user)
-                db.session.commit()
-                logger.info("Admin user created with default password")
+            try:
+                existing_admin = User.query.filter_by(email=admin_email).first()
+                
+                if not existing_admin:
+                    admin_user = User(
+                        email=admin_email,
+                        display_name="Admin",
+                        is_admin=True,
+                        email_verified=True,
+                        is_active=True
+                    )
+                    admin_user.set_password("admin123")  # Default password - CHANGE IMMEDIATELY
+                    db.session.add(admin_user)
+                    db.session.commit()
+                    logger.info("Admin user created with default password")
+                    admin_created = True
+                else:
+                    admin_created = False
+            except Exception as admin_error:
+                logger.error(f"Admin creation failed: {admin_error}")
+                admin_created = False
             
             return f"""
             <html>
             <body style="font-family: Arial, sans-serif; margin: 40px;">
                 <h1 style="color: orange;">⚠️ Emergency Database Reset Complete</h1>
                 <p><strong>Database has been completely reset!</strong></p>
-                <p>Admin account created:</p>
+                {f'''<p>Admin account created:</p>
                 <ul>
                     <li>Email: {admin_email}</li>
                     <li>Password: admin123 (CHANGE IMMEDIATELY)</li>
-                </ul>
-                <p><a href="/login" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a></p>
+                </ul>''' if admin_created else '<p>Admin account creation failed - please register manually</p>'}
+                <p><a href="/simple-login" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a></p>
+                <p><a href="/simple-register" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Register New Account</a></p>
                 <p style="color: red; font-size: 14px;">
                     <strong>WARNING:</strong> All user data has been lost. This should only be used in emergency situations.
                 </p>
@@ -3024,6 +3145,7 @@ def emergency_database_reset():
         <body style="font-family: Arial, sans-serif; margin: 40px;">
             <h1 style="color: red;">❌ Emergency Reset Failed</h1>
             <p><strong>Error:</strong> {error_msg}</p>
+            <p><a href="/minimal-test">Basic Server Test</a></p>
             <p>Please contact technical support immediately.</p>
         </body>
         </html>
@@ -3048,27 +3170,64 @@ def service_worker():
 # Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
-    return render_template('404.html'), 404
+    try:
+        return render_template('404.html'), 404
+    except:
+        return "Page not found. <a href='/'>Home</a> | <a href='/simple-login'>Login</a>", 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    db.session.rollback()
-    return render_template('500.html'), 500
+    try:
+        db.session.rollback()
+        return render_template('500.html'), 500
+    except:
+        return f"""
+        <html>
+        <body style="font-family: Arial; margin: 40px;">
+            <h1>🚨 Server Error</h1>
+            <p>Something went wrong: {error}</p>
+            <h2>Try these alternatives:</h2>
+            <ul>
+                <li><a href="/test">Server Test</a></li>
+                <li><a href="/debug">Debug Info</a></li>
+                <li><a href="/simple-login">Simple Login</a></li>
+                <li><a href="/emergency-db-reset" style="color: red;">Emergency Reset</a></li>
+            </ul>
+        </body>
+        </html>
+        """, 500
 
 if __name__ == '__main__':
     try:
-        # Start the trading bot as a background service
+        # Ensure database tables exist
+        with app.app_context():
+            try:
+                db.create_all()
+                logger.info("Database tables ensured")
+            except Exception as db_error:
+                logger.error(f"Database initialization failed: {db_error}")
+        
+        # Try to start the trading bot (optional)
         try:
             from start_bot_service import start_trading_bot
             start_trading_bot()
             logger.info("🤖 Trading bot started successfully")
+        except ImportError:
+            logger.info("Trading bot service not found - continuing without it")
         except Exception as bot_error:
-            logger.error(f"Failed to start trading bot: {bot_error}")
-            # Continue running Flask app even if bot fails to start
+            logger.error(f"Failed to start trading bot: {bot_error} - continuing without it")
         
-        # Database tables are already created by create_tables() function above
-        app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+        # Start Flask app
+        port = int(os.environ.get('PORT', 5000))
+        logger.info(f"Starting Flask app on port {port}")
+        app.run(debug=False, host='0.0.0.0', port=port)
+        
     except Exception as e:
         logger.error(f"Failed to start application: {e}")
-        print(f"Error: {e}")
-        raise
+        print(f"Critical Error: {e}")
+        # Try to start minimal server anyway
+        try:
+            app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+        except Exception as final_error:
+            print(f"Final startup attempt failed: {final_error}")
+            raise
