@@ -7,14 +7,21 @@ Connects to your existing Flask app database
 import asyncio
 import aiohttp
 import pandas as pd
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import sqlite3
 import os
 import logging
 from datetime import datetime, timedelta
 import traceback
 import json
 from typing import List, Dict, Optional
+
+# Try to import PostgreSQL support, but fallback to SQLite if not available
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    POSTGRES_AVAILABLE = True
+except ImportError:
+    POSTGRES_AVAILABLE = False
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -32,85 +39,139 @@ class WebsiteTradingBot:
         self.last_check = None
         
     async def connect_database(self):
-        """Connect to Railway PostgreSQL database"""
+        """Connect to database (PostgreSQL or SQLite)"""
         try:
-            if not DATABASE_URL:
-                logger.error("DATABASE_URL not found in environment variables")
-                return False
-                
-            self.db_connection = psycopg2.connect(
-                DATABASE_URL,
-                cursor_factory=RealDictCursor,
-                sslmode='require'
-            )
-            logger.info("Successfully connected to Railway PostgreSQL database")
-            return True
+            # Check if we have a PostgreSQL DATABASE_URL and psycopg2 is available
+            if DATABASE_URL and DATABASE_URL.startswith(('postgresql://', 'postgres://')) and POSTGRES_AVAILABLE:
+                # Use PostgreSQL for production (Railway)
+                self.db_connection = psycopg2.connect(
+                    DATABASE_URL,
+                    cursor_factory=RealDictCursor,
+                    sslmode='require'
+                )
+                logger.info("Successfully connected to Railway PostgreSQL database")
+                self.db_type = 'postgresql'
+                return True
+            else:
+                # Use SQLite for local development
+                db_path = os.path.join(os.path.dirname(__file__), 'trading_bot.db')
+                self.db_connection = sqlite3.connect(db_path, check_same_thread=False)
+                self.db_connection.row_factory = sqlite3.Row  # For dict-like access
+                logger.info(f"Successfully connected to SQLite database: {db_path}")
+                self.db_type = 'sqlite'
+                return True
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
+            # Instead of returning False, let's disable the bot gracefully
+            logger.info("Database connection failed - bot will run in no-database mode")
+            self.db_connection = None
+            self.db_type = None
             return False
+    
+    def execute_db_query(self, query: str, params: tuple = None, fetch_type: str = 'all'):
+        """Execute database query with proper parameter substitution for SQLite or PostgreSQL"""
+        if not self.db_connection:
+            logger.warning("No database connection available - skipping query")
+            return [] if fetch_type == 'all' else None
+            
+        try:
+            # Convert PostgreSQL-style %s placeholders to SQLite-style ? placeholders
+            if self.db_type == 'sqlite' and '%s' in query:
+                query = query.replace('%s', '?')
+            
+            cursor = self.db_connection.cursor()
+            
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            if fetch_type == 'all':
+                result = cursor.fetchall()
+            elif fetch_type == 'one':
+                result = cursor.fetchone()
+            else:
+                result = None
+                
+            # Commit for INSERT/UPDATE/DELETE operations
+            if query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE')):
+                self.db_connection.commit()
+            
+            cursor.close()
+            return result
+            
+        except Exception as e:
+            logger.error(f"Database query error: {e}")
+            return [] if fetch_type == 'all' else None
     
     def get_active_subscriptions(self) -> List[Dict]:
         """Get all users with online bot status (admin + active subscribers)"""
         try:
-            with self.db_connection.cursor() as cursor:
-                # Get all users with online bot status
-                query = """
-                    SELECT 
-                        u.id as user_id,
-                        u.email,
-                        u.display_name,
-                        u.is_admin,
-                        u.bot_status,
-                        u.bot_last_active,
-                        s.plan_type,
-                        s.coins,
-                        s.status as subscription_status
-                    FROM users u
-                    LEFT JOIN subscription s ON u.id = s.user_id AND s.status = 'active'
-                    WHERE u.bot_status = 'online' 
-                    AND u.is_active = true
-                    AND (
-                        u.is_admin = true OR 
-                        (s.status = 'active' AND s.id IS NOT NULL)
-                    )
-                """
-                cursor.execute(query)
-                users = cursor.fetchall()
-                
-                result = []
-                for user in users:
-                    try:
-                        user_data = {
-                            'user_id': user['user_id'],
-                            'email': user['email'],
-                            'display_name': user['display_name'],
-                            'is_admin': user['is_admin'],
-                            'bot_status': user['bot_status'],
-                            'coins': []
-                        }
-                        
-                        if user['is_admin']:
-                            # Admin gets free version with default coins (SOL, RAY from your Discord bot)
-                            user_data['plan_type'] = 'free'
-                            user_data['coins'] = ['SOL', 'RAY']  # Your Discord bot's coins
-                        else:
-                            # Regular customer with subscription
-                            if user['coins']:
-                                coins_list = json.loads(user['coins'])
+            # Get all users with online bot status
+            query = """
+                SELECT 
+                    u.id as user_id,
+                    u.email,
+                    u.display_name,
+                    u.is_admin,
+                    u.bot_status,
+                    u.bot_last_active,
+                    s.plan_type,
+                    s.coins,
+                    s.status as subscription_status
+                FROM user u
+                LEFT JOIN subscription s ON u.id = s.user_id AND s.status = 'active'
+                WHERE u.bot_status = 'online' 
+                AND u.is_active = 1
+                AND (
+                    u.is_admin = 1 OR 
+                    (s.status = 'active' AND s.id IS NOT NULL)
+                )
+            """
+            users = self.execute_db_query(query, fetch_type='all')
+            
+            result = []
+            for user in users:
+                try:
+                    user_data = {
+                        'user_id': user['user_id'] if isinstance(user, dict) else user[0],
+                        'email': user['email'] if isinstance(user, dict) else user[1],
+                        'display_name': user['display_name'] if isinstance(user, dict) else user[2],
+                        'is_admin': user['is_admin'] if isinstance(user, dict) else user[3],
+                        'bot_status': user['bot_status'] if isinstance(user, dict) else user[4],
+                        'bot_last_active': user['bot_last_active'] if isinstance(user, dict) else user[5],
+                        'plan_type': user['plan_type'] if isinstance(user, dict) else user[6],
+                        'subscription_status': user['subscription_status'] if isinstance(user, dict) else user[8]
+                    }
+                    
+                    # Handle coins parsing
+                    coins_data = user['coins'] if isinstance(user, dict) else user[7]
+                    
+                    if user_data['is_admin']:
+                        # Admin gets free version with default coins
+                        user_data['plan_type'] = 'free'
+                        user_data['coins'] = ['SOL', 'RAY']  # Default coins for admin
+                    else:
+                        # Regular customer with subscription
+                        if coins_data:
+                            try:
+                                coins_list = json.loads(coins_data) if isinstance(coins_data, str) else coins_data
                                 if len(coins_list) <= 2:  # Respect 2-coin limitation
-                                    user_data['plan_type'] = user['plan_type']
                                     user_data['coins'] = coins_list
                                 else:
                                     continue  # Skip if too many coins
-                            else:
-                                continue  # Skip if no coins selected
+                            except (json.JSONDecodeError, TypeError):
+                                continue  # Skip if invalid coins data
+                        else:
+                            continue  # Skip if no coins selected
+                    
+                    if user_data.get('coins'):  # Only add if has coins to monitor
+                        result.append(user_data)
                         
-                        if user_data['coins']:  # Only add if has coins to monitor
-                            result.append(user_data)
-                            
-                    except (json.JSONDecodeError, TypeError) as e:
-                        logger.warning(f"Invalid coins JSON for user {user['user_id']}: {e}")
-                        continue
+                except (json.JSONDecodeError, TypeError) as e:
+                    user_id = user['user_id'] if isinstance(user, dict) else user[0]
+                    logger.warning(f"Invalid coins JSON for user {user_id}: {e}")
+                    continue
                 
                 logger.info(f"Found {len(result)} users with online bots ({sum(1 for u in result if u['is_admin'])} admin, {sum(1 for u in result if not u['is_admin'])} customers)")
                 return result
@@ -123,30 +184,29 @@ class WebsiteTradingBot:
                            price: float, confidence: int, algorithm: str, message: str):
         """Create a trading alert in the database and send push notification"""
         try:
-            with self.db_connection.cursor() as cursor:
-                query = """
-                    INSERT INTO trading_alert 
-                    (user_id, coin_pair, alert_type, price, confidence, algorithm, message, expires_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                expires_at = datetime.utcnow() + timedelta(hours=24)
-                
-                cursor.execute(query, (
-                    user_id, coin_pair, alert_type, price, confidence, 
-                    algorithm, message, expires_at
-                ))
-                self.db_connection.commit()
-                
-                logger.info(f"Created {alert_type} alert for user {user_id}: {coin_pair}")
-                
-                # Send push notification if user has enabled it
-                self.send_push_notification(user_id, coin_pair, alert_type, price, confidence, algorithm)
-                
-                return True
+            query = """
+                INSERT INTO trading_alert 
+                (user_id, coin_pair, alert_type, price, confidence, algorithm, message, expires_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            expires_at = datetime.utcnow() + timedelta(hours=24)
+            
+            self.execute_db_query(query, (
+                user_id, coin_pair, alert_type, price, confidence, 
+                algorithm, message, expires_at
+            ))
+            
+            logger.info(f"Created {alert_type} alert for user {user_id}: {coin_pair}")
+            
+            # Send push notification if user has enabled it
+            self.send_push_notification(user_id, coin_pair, alert_type, price, confidence, algorithm)
+            
+            return True
                 
         except Exception as e:
             logger.error(f"Error creating trading alert: {e}")
-            self.db_connection.rollback()
+            if self.db_type == 'postgresql' and self.db_connection:
+                self.db_connection.rollback()
             return False
 
     def send_push_notification(self, user_id: int, coin_pair: str, alert_type: str, 
@@ -154,52 +214,56 @@ class WebsiteTradingBot:
         """Send push notification for trading alert"""
         try:
             # Get user's push notification subscription
-            with self.db_connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT email, push_notifications_enabled, push_subscription_endpoint,
-                           push_subscription_p256dh, push_subscription_auth
-                    FROM "user" WHERE id = %s AND push_notifications_enabled = true
-                """, (user_id,))
-                
-                user_data = cursor.fetchone()
-                
-                if not user_data:
-                    return  # User doesn't have push notifications enabled
-                
-                # Import push notification service
-                from push_notifications import PushNotificationService
-                push_service = PushNotificationService()
-                
-                # Create user object for push service
-                class UserObj:
-                    def __init__(self, data):
+            query = """
+                SELECT email, push_notifications_enabled, push_subscription_endpoint,
+                       push_subscription_p256dh, push_subscription_auth
+                FROM user WHERE id = %s AND push_notifications_enabled = 1
+            """
+            
+            user_data = self.execute_db_query(query, (user_id,), fetch_type='one')
+            
+            if not user_data:
+                return  # User doesn't have push notifications enabled
+            
+            # Import push notification service
+            from push_notifications import PushNotificationService
+            push_service = PushNotificationService()
+            
+            # Create user object for push service
+            class UserObj:
+                def __init__(self, data):
+                    if isinstance(data, dict):
                         self.email = data['email']
-                        self.push_notifications_enabled = data['push_notifications_enabled']
                         self.push_subscription_endpoint = data['push_subscription_endpoint']
                         self.push_subscription_p256dh = data['push_subscription_p256dh']
                         self.push_subscription_auth = data['push_subscription_auth']
-                
-                user_obj = UserObj(user_data)
-                
-                # Format price and change percentage
-                price_str = f"${price:,.2f}" if price else "N/A"
-                change_str = "N/A"  # You can calculate this from price data if needed
-                
-                # Send push notification
-                result = push_service.send_trading_alert_notification(
-                    user=user_obj,
-                    symbol=coin_pair,
-                    price=price_str,
-                    change=change_str,
-                    algorithm=algorithm,
-                    alert_type=alert_type,
-                    confidence=f"{confidence}%"
-                )
-                
-                if result:
-                    logger.info(f"Push notification sent to user {user_id} for {coin_pair}")
-                else:
-                    logger.warning(f"Failed to send push notification to user {user_id}")
+                    else:  # SQLite row tuple
+                        self.email = data[0]
+                        self.push_subscription_endpoint = data[2]
+                        self.push_subscription_p256dh = data[3]
+                        self.push_subscription_auth = data[4]
+            
+            user_obj = UserObj(user_data)
+            
+            # Format price and change percentage
+            price_str = f"${price:,.2f}" if price else "N/A"
+            change_str = "N/A"  # You can calculate this from price data if needed
+            
+            # Send push notification
+            result = push_service.send_trading_alert_notification(
+                user=user_obj,
+                symbol=coin_pair,
+                price=price_str,
+                change=change_str,
+                algorithm=algorithm,
+                alert_type=alert_type,
+                confidence=f"{confidence}%"
+            )
+            
+            if result:
+                logger.info(f"Push notification sent to user {user_id} for {coin_pair}")
+            else:
+                logger.warning(f"Failed to send push notification to user {user_id}")
                     
         except Exception as e:
             logger.error(f"Error sending push notification: {e}")
@@ -319,14 +383,13 @@ class WebsiteTradingBot:
     def update_user_bot_activity(self, user_id: int):
         """Update user's bot last active timestamp"""
         try:
-            with self.db_connection.cursor() as cursor:
-                query = """
-                    UPDATE users 
-                    SET bot_last_active = %s 
-                    WHERE id = %s AND bot_status = 'online'
-                """
-                cursor.execute(query, (datetime.utcnow(), user_id))
-                self.db_connection.commit()
+            query = """
+                UPDATE user 
+                SET bot_last_active = %s 
+                WHERE id = %s AND bot_status = 'online'
+            """
+            self.execute_db_query(query, (datetime.utcnow(), user_id))
+            
         except Exception as e:
             logger.error(f"Error updating bot activity for user {user_id}: {e}")
 
@@ -657,10 +720,10 @@ class WebsiteTradingBot:
         """Start the website trading bot"""
         logger.info("Starting Website Trading Bot...")
         
-        # Connect to database
-        if not await self.connect_database():
-            logger.error("Failed to connect to database. Exiting.")
-            return False
+        # Connect to database (continue even if it fails)
+        database_connected = await self.connect_database()
+        if not database_connected:
+            logger.warning("Bot starting in no-database mode - will skip database operations")
         
         self.running = True
         
