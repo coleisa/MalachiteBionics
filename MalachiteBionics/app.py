@@ -1664,6 +1664,11 @@ def dashboard():
                          recent_alerts=recent_alerts,
                          unread_count=unread_count)
 
+@app.route('/pricing')
+def pricing():
+    """Display pricing plans page"""
+    return render_template('pricing.html')
+
 @app.route('/bot/activate', methods=['POST'])
 @login_required
 def activate_bot():
