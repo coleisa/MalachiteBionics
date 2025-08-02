@@ -53,10 +53,19 @@ class WebsiteTradingBot:
                 self.db_type = 'postgresql'
                 return True
             else:
-                # Use SQLite for local development
+                # Use SQLite for local development - SAME FILE AS FLASK APP
                 db_path = os.path.join(os.path.dirname(__file__), 'trading_bot.db')
+                
                 self.db_connection = sqlite3.connect(db_path, check_same_thread=False)
                 self.db_connection.row_factory = sqlite3.Row  # For dict-like access
+                
+                # Always check if tables exist and create them if they don't
+                if not self.check_tables_exist():
+                    logger.info("Database tables don't exist, creating them...")
+                    self.create_sqlite_tables()
+                else:
+                    logger.info("Database tables already exist")
+                
                 logger.info(f"Successfully connected to SQLite database: {db_path}")
                 self.db_type = 'sqlite'
                 return True
@@ -67,6 +76,99 @@ class WebsiteTradingBot:
             self.db_connection = None
             self.db_type = None
             return False
+    
+    def check_tables_exist(self):
+        """Check if required tables exist in SQLite database"""
+        try:
+            cursor = self.db_connection.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [row[0] for row in cursor.fetchall()]
+            cursor.close()
+            
+            required_tables = ['user', 'subscription', 'trading_alert']
+            return all(table in tables for table in required_tables)
+            
+        except Exception as e:
+            logger.error(f"Error checking table existence: {e}")
+            return False
+    
+    def create_sqlite_tables(self):
+        """Create SQLite tables matching Flask app schema"""
+        try:
+            cursor = self.db_connection.cursor()
+            
+            # Create user table (matches Flask app's User model)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid VARCHAR(36) UNIQUE,
+                    email VARCHAR(120) UNIQUE NOT NULL,
+                    display_name VARCHAR(100) NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    email_verified BOOLEAN DEFAULT 0 NOT NULL,
+                    email_verification_token VARCHAR(100) UNIQUE,
+                    email_verification_sent_at DATETIME,
+                    phone VARCHAR(20),
+                    last_login DATETIME,
+                    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    login_count INTEGER DEFAULT 0,
+                    is_admin BOOLEAN DEFAULT 0 NOT NULL,
+                    discord_user_id VARCHAR(50) UNIQUE,
+                    discord_server_id VARCHAR(50),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT 1,
+                    bot_status VARCHAR(20) DEFAULT 'offline',
+                    bot_last_active DATETIME,
+                    bot_activated_at DATETIME,
+                    push_subscription_endpoint TEXT,
+                    push_subscription_p256dh VARCHAR(200),
+                    push_subscription_auth VARCHAR(100),
+                    push_notifications_enabled BOOLEAN DEFAULT 0
+                )
+            """)
+            
+            # Create subscription table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS subscription (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    stripe_subscription_id VARCHAR(100) UNIQUE,
+                    stripe_customer_id VARCHAR(100),
+                    plan_type VARCHAR(20) NOT NULL,
+                    coins TEXT,
+                    status VARCHAR(20) DEFAULT 'inactive',
+                    current_period_start DATETIME,
+                    current_period_end DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES user (id)
+                )
+            """)
+            
+            # Create trading_alert table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS trading_alert (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    coin_pair VARCHAR(20) NOT NULL,
+                    alert_type VARCHAR(20) NOT NULL,
+                    price REAL NOT NULL,
+                    confidence INTEGER DEFAULT 85,
+                    algorithm VARCHAR(20) NOT NULL,
+                    message TEXT NOT NULL,
+                    is_read BOOLEAN DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    expires_at DATETIME,
+                    FOREIGN KEY (user_id) REFERENCES user (id)
+                )
+            """)
+            
+            self.db_connection.commit()
+            cursor.close()
+            logger.info("SQLite tables created successfully")
+            
+        except Exception as e:
+            logger.error(f"Error creating SQLite tables: {e}")
     
     def execute_db_query(self, query: str, params: tuple = None, fetch_type: str = 'all'):
         """Execute database query with proper parameter substitution for SQLite or PostgreSQL"""
