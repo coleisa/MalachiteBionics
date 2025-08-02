@@ -1893,35 +1893,115 @@ def simple_login():
         password = request.form.get('password', '')
         
         try:
+            # Force fresh transaction state
+            db.session.rollback()
+            db.session.close()
+            
             # Force database setup first
             db.create_all()
             
-            # Find user
+            # Find user with minimal query
             user = User.query.filter_by(email=email).first()
             
             if user and check_password_hash(user.password_hash, password):
+                # Ensure user has UUID if needed
+                if not user.uuid:
+                    user.uuid = str(uuid.uuid4())
+                    try:
+                        db.session.commit()
+                    except:
+                        db.session.rollback()
+                        # Continue even if UUID save fails
+                
                 login_user(user, remember=True)
+                logger.info(f"Simple login successful for {email}")
                 return redirect(url_for('dashboard'))
             else:
-                return "Invalid credentials. <a href='/simple-login'>Try again</a>"
+                return """
+                <html>
+                <body style="font-family: Arial; margin: 50px; background: #f5f5f5;">
+                    <div style="max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px;">
+                        <h2 style="color: red;">Invalid Credentials</h2>
+                        <p>The email or password you entered is incorrect.</p>
+                        <p><a href="/simple-login" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Try Again</a></p>
+                        <p><a href="/admin/fix-database" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Fix Database</a></p>
+                        <p><a href="/emergency-db-reset" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Emergency Reset</a></p>
+                    </div>
+                </body>
+                </html>
+                """
                 
         except Exception as e:
-            return f"Login error: {e}. <a href='/simple-login'>Try again</a> or <a href='/emergency-db-reset'>Reset database</a>"
+            db.session.rollback()
+            logger.error(f"Simple login error: {e}")
+            return f"""
+            <html>
+            <body style="font-family: Arial; margin: 50px; background: #f5f5f5;">
+                <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px;">
+                    <h2 style="color: red;">Login Error</h2>
+                    <p><strong>Error:</strong> {str(e)}</p>
+                    <h3>Quick Solutions:</h3>
+                    <p><a href="/admin/fix-database" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px;">🔧 Fix Database</a></p>
+                    <p><a href="/admin/reset-transaction" style="background: #ffc107; color: black; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px;">🔄 Reset Transaction</a></p>
+                    <p><a href="/emergency-db-reset" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px;" onclick="return confirm('This will delete ALL data! Are you sure?')">⚠️ Emergency Reset</a></p>
+                    <p><a href="/make-admin" style="background: #6f42c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px;">👤 Create Admin</a></p>
+                    <hr>
+                    <p style="font-size: 12px; color: #666;">If you continue to see errors, restart the Flask application.</p>
+                </div>
+            </body>
+            </html>
+            """
     
     # Simple HTML form
     return '''
     <html>
+    <head>
+        <title>Simple Login - MalachiteBionics</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
     <body style="font-family: Arial; margin: 50px; background: #f5f5f5;">
-        <div style="max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px;">
-            <h2>Simple Login</h2>
+        <div style="max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h2 style="text-align: center; color: #333;">🔐 Simple Login</h2>
+            <p style="text-align: center; color: #666;">Simplified login with minimal validation</p>
+            
             <form method="POST">
-                <p><input type="email" name="email" placeholder="Email" required style="width: 100%; padding: 10px; margin: 5px 0;"></p>
-                <p><input type="password" name="password" placeholder="Password" required style="width: 100%; padding: 10px; margin: 5px 0;"></p>
-                <p><button type="submit" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 4px;">Login</button></p>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Email:</label>
+                    <input type="email" name="email" placeholder="Enter your email" required 
+                           style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Password:</label>
+                    <input type="password" name="password" placeholder="Enter your password" required 
+                           style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px;">
+                </div>
+                
+                <button type="submit" 
+                        style="width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer;">
+                    Login
+                </button>
             </form>
-            <hr>
-            <p><a href="/simple-register">Need an account? Register here</a></p>
-            <p><a href="/emergency-db-reset" style="color: red;">Emergency: Reset Database</a></p>
+            
+            <hr style="margin: 30px 0;">
+            
+            <div style="text-align: center;">
+                <h3 style="color: #333; margin-bottom: 15px;">Need Help?</h3>
+                <p><a href="/simple-register" style="background: #28a745; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; margin: 5px; display: inline-block;">📝 Register Account</a></p>
+                <p><a href="/admin/fix-database" style="background: #ffc107; color: black; padding: 10px 15px; text-decoration: none; border-radius: 5px; margin: 5px; display: inline-block;">🔧 Fix Database</a></p>
+                <p><a href="/make-admin" style="background: #6f42c1; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; margin: 5px; display: inline-block;">👤 Create Admin</a></p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                <h4 style="margin-top: 0; color: #495057;">Default Admin Account:</h4>
+                <p style="margin: 5px 0; font-family: monospace;">
+                    <strong>Email:</strong> malachitebionics@gmail.com<br>
+                    <strong>Password:</strong> admin123
+                </p>
+                <p style="font-size: 12px; color: #6c757d; margin-bottom: 0;">
+                    (Only works if admin account exists)
+                </p>
+            </div>
         </div>
     </body>
     </html>
@@ -3350,6 +3430,163 @@ def internal_error(error):
         </body>
         </html>
         """, 500
+
+@app.route('/health')
+def health_status():
+    """Comprehensive system health page"""
+    try:
+        status_info = {
+            'database_connection': 'Unknown',
+            'user_count': 0,
+            'admin_count': 0,
+            'admin_exists': False,
+            'sample_users': [],
+            'database_tables': [],
+            'recent_errors': []
+        }
+        
+        try:
+            # Test database connection
+            db.create_all()
+            status_info['database_connection'] = 'Connected'
+            
+            # Get table names
+            inspector = db.inspect(db.engine)
+            status_info['database_tables'] = inspector.get_table_names()
+            
+            # Count users
+            status_info['user_count'] = User.query.count()
+            status_info['admin_count'] = User.query.filter_by(is_admin=True).count()
+            
+            # Check if specific admin exists
+            admin = User.query.filter_by(email='malachitebionics@gmail.com').first()
+            status_info['admin_exists'] = admin is not None
+            
+            # Get sample users (first 5)
+            users = User.query.limit(5).all()
+            for user in users:
+                status_info['sample_users'].append({
+                    'email': user.email,
+                    'is_admin': user.is_admin,
+                    'has_uuid': bool(user.uuid),
+                    'created_at': str(user.created_at) if hasattr(user, 'created_at') else 'Unknown'
+                })
+            
+        except Exception as db_error:
+            status_info['database_connection'] = f'ERROR: {str(db_error)}'
+        
+        # Generate HTML response
+        html = f"""
+        <html>
+        <head>
+            <title>System Status - MalachiteBionics</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body {{ font-family: Arial; margin: 20px; background: #f5f5f5; }}
+                .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
+                .status-good {{ color: green; font-weight: bold; }}
+                .status-bad {{ color: red; font-weight: bold; }}
+                .status-warning {{ color: orange; font-weight: bold; }}
+                .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
+                .actions {{ text-align: center; margin: 30px 0; }}
+                .btn {{ display: inline-block; padding: 12px 20px; margin: 5px; text-decoration: none; border-radius: 5px; font-weight: bold; }}
+                .btn-primary {{ background: #007bff; color: white; }}
+                .btn-success {{ background: #28a745; color: white; }}
+                .btn-warning {{ background: #ffc107; color: black; }}
+                .btn-danger {{ background: #dc3545; color: white; }}
+                pre {{ background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🔍 System Status Dashboard</h1>
+                <p><strong>Timestamp:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC</p>
+                
+                <div class="section">
+                    <h2>💾 Database Status</h2>
+                    <p><strong>Connection:</strong> 
+                        <span class="{'status-good' if status_info['database_connection'] == 'Connected' else 'status-bad'}">
+                            {status_info['database_connection']}
+                        </span>
+                    </p>
+                    <p><strong>Tables:</strong> {', '.join(status_info['database_tables']) if status_info['database_tables'] else 'None found'}</p>
+                </div>
+                
+                <div class="section">
+                    <h2>👥 User Statistics</h2>
+                    <p><strong>Total Users:</strong> {status_info['user_count']}</p>
+                    <p><strong>Admin Users:</strong> {status_info['admin_count']}</p>
+                    <p><strong>Default Admin Exists:</strong> 
+                        <span class="{'status-good' if status_info['admin_exists'] else 'status-bad'}">
+                            {'Yes' if status_info['admin_exists'] else 'No'}
+                        </span>
+                    </p>
+                </div>
+                
+                <div class="section">
+                    <h2>📋 Sample Users</h2>
+                    {'<p>No users found</p>' if not status_info['sample_users'] else ''}
+                    {''.join([f'''
+                    <div style="border: 1px solid #eee; padding: 10px; margin: 5px 0; border-radius: 3px;">
+                        <strong>{user['email']}</strong> 
+                        {'(Admin)' if user['is_admin'] else '(User)'}
+                        {'- Has UUID' if user['has_uuid'] else '- Missing UUID'}
+                        <br><small>Created: {user['created_at']}</small>
+                    </div>
+                    ''' for user in status_info['sample_users']])}
+                </div>
+                
+                <div class="actions">
+                    <h2>🔧 Quick Actions</h2>
+                    <a href="/simple-login" class="btn btn-primary">🔐 Simple Login</a>
+                    <a href="/simple-register" class="btn btn-success">📝 Register</a>
+                    <a href="/make-admin" class="btn btn-warning">👤 Create Admin</a>
+                    <a href="/admin/fix-database" class="btn btn-warning">🔧 Fix Database</a>
+                    <a href="/admin/reset-transaction" class="btn btn-warning">🔄 Reset Transaction</a>
+                    <a href="/emergency-db-reset" class="btn btn-danger" onclick="return confirm('Delete ALL data?')">⚠️ Emergency Reset</a>
+                </div>
+                
+                <div class="section">
+                    <h2>🧪 Test Credentials</h2>
+                    <div style="background: #e7f3ff; padding: 15px; border-radius: 5px;">
+                        <h4>Default Admin Account:</h4>
+                        <pre>Email: malachitebionics@gmail.com
+Password: admin123</pre>
+                        <p><small>Use "Create Admin" if this account doesn't exist</small></p>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2>📊 Debug Information</h2>
+                    <pre>{str(status_info)}</pre>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
+                    <p>🔄 <a href="/status" style="color: #666;">Refresh Status</a> | 
+                    <a href="/" style="color: #666;">Home</a> | 
+                    <a href="/dashboard" style="color: #666;">Dashboard</a></p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html
+        
+    except Exception as e:
+        logger.error(f"Status page error: {e}")
+        return f"""
+        <html>
+        <body style="font-family: Arial; margin: 50px; background: #f5f5f5;">
+            <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px;">
+                <h2 style="color: red;">❌ Status Check Failed</h2>
+                <p><strong>Error:</strong> {str(e)}</p>
+                <p><a href="/emergency-db-reset" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">⚠️ Emergency Reset</a></p>
+                <p><a href="/simple-login" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">🔐 Try Login</a></p>
+            </div>
+        </body>
+        </html>
+        """
 
 if __name__ == '__main__':
     try:
